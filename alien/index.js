@@ -2,6 +2,7 @@ var stack_svg = d3.select('#stack');
 var heat_svg = d3.select('#heat');
 var map_svg = d3.select('#map');
 var duration_svg = d3.select('#duration');
+var sankey_svg = d3.select('#sankey');
 
 var svgWidth = +stack_svg.attr('width');
 var svgHeight = +stack_svg.attr('height');
@@ -17,6 +18,8 @@ var colorCellpadding = 1;
 var HeatCell = function(colors) {
     this.colors = colors;
 }
+
+
 
 var validate = function(data) {
     if (data.country != 'us') {
@@ -69,6 +72,9 @@ function readyToDraw(error, dataset, states) {
     drawHeat(heatData);
 
     drawDuration(dataset);
+
+    drawSankey(dataset);
+
     // draw the map figure
     var projection = d3.geoAlbersUsa();
 
@@ -368,12 +374,14 @@ var drawDuration = function(data) {
     var yScale = d3.scaleLinear()
         .domain([217, 0])
         .range([padding.t, svgHeight - padding.b]);
+
     console.log(heightMap);
 
     duration_svg.selectAll('.color-bar')
         .data(data)
         .enter()
         .append('rect')
+        .attr('class', 'color-bar')
         .attr('x', d => xScale(d.duration))
         .attr('y', d => yScale(heightMap[d.color]))
         .attr('width', barWidth)
@@ -381,5 +389,126 @@ var drawDuration = function(data) {
         .style('fill', d => d.color)
         .style('fill-opacity', 0.05)
         
+}
+
+var drawSankey = function(data) {
+    var shapeTransform = {
+        'changing':'changing',
+        'chevron': 'chevron',
+        'cigar': 'cigar',
+        'circle': 'circle',
+        'cylinder': 'cylinder',
+        'diamond': 'diamond',
+        "disk": 'disk',
+        "fireball": "fireball",
+        "formation": 'formation',
+        "light": 'light',
+        "oval": 'oval',
+        "rectangle": 'rectangle',
+        "teardrop": 'teardrop',
+        "triangle": 'triangle',
+        "other": 'other',
+        "sphere": 'circle',
+        'flash':'light'
+    }
+    var colors = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
+    // source, target, count
+    var temp = {};
+    data.forEach((d) => {
+        var color = d.color;
+        var shape = d.shape;
+        if (shape in shapeTransform) {
+            shape = shapeTransform[shape];
+            var key = color + ',' + shape;
+            if (key in temp) {
+                temp[key]++;
+            } else {
+                temp[key] = 1;
+            }
+        }
+    })
+    var nodeCollection = {};
+    var nodes = [];
+    var links = [];
+    for (var key in temp) {
+        var source = key.split(',')[0];
+        var target = key.split(',')[1];
+        var value = temp[key];
+        if (!(source in nodeCollection)) {
+            nodeCollection[source] = true;
+            nodes.push({'name': source});
+        }
+        if (!(target in nodeCollection)) {
+            nodeCollection[target] = true;
+            nodes.push({'name': target});
+        }
+        links.push({
+            'source': source,
+            'target': target,
+            'value': value,
+            'color': source
+        })
+    }
+
+    
+    var nodePosition = {};
+    var i;
+    for (i = 0; i < nodes.length; i++) {
+        nodePosition[nodes[i].name] = i;
+    }
+    links.forEach((d, i) => {
+        links[i].source = nodePosition[links[i].source]
+        links[i].target = nodePosition[links[i].target]
+    })
+    
+    console.log(links)
+    console.log(nodes);
+    
+    
+    var sankey = d3.sankey()
+        .nodeWidth(30)
+        .nodePadding(5)
+        .size([svgWidth - padding.l - padding.r, svgHeight - padding.t - padding.b])
+
+    graph = sankey.nodes(nodes).links(links)();
+
+    console.log(graph)
+    
+    sankey_svg.append('g')
+        .attr('stroke', '#000')
+        .selectAll('.node')
+        .data(graph.nodes)
+        .enter()
+        .append('rect')
+        .attr('class', 'node')
+        .attr('x', d => d.x0)
+        .attr('y', d => d.y0)
+        .attr('height', d => d.y1 - d.y0)
+        .attr('width', sankey.nodeWidth())
+        .append('title')
+        .text(d => d.name)
+        
+
+    var linkSelection = 
+        sankey_svg.append('g')
+            .attr('fill', 'none')
+            .attr('stroke-opacity', 0.5)
+            .selectAll('.link')
+            .data(graph.links)
+            .enter()
+
+    linkSelection
+        .append('path')
+        .attr('class', 'link')
+        .attr('d', d3.sankeyLinkHorizontal())
+        .style('stroke-width', d => Math.max(1, d.width))
+        .style('fill', d => d.color)
+        .style('fill-opacity', 0.8)
+        
+
+
+
+        
+
 
 }
