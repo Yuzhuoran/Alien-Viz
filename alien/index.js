@@ -19,6 +19,23 @@ var HeatCell = function(colors) {
     this.colors = colors;
 }
 
+var color_filter = {
+    'yellow': true,
+    'orange': true,
+    'red': true,
+};
+var year_filter = {
+    'start': 0,
+    'end': 3000
+};
+
+var state_filter = {
+
+}
+
+var heatData;
+var stackData;
+
 
 
 var validate = function(data) {
@@ -37,6 +54,7 @@ var validate = function(data) {
 }
 d3.queue()
     .defer(d3.csv, '/data/filter_color.csv', (row) => {
+        var date = new Date(row['datetime']);
         var data = {
             'date': new Date(row['datetime']),
             'city': row['city'],
@@ -47,7 +65,11 @@ d3.queue()
             'comments': row['comments'],
             'lat': +row['latitude'],
             'lng': +row['longitude '],
-            'color': row['color']
+            'color': row['color'],
+            'year': date.getFullYear(),
+            'month': date.getMonth() + 1,
+            'day': date.getDate(),
+            'hour':date.getHours()
         }
         if (validate(data)) {
             return data;
@@ -63,12 +85,13 @@ function readyToDraw(error, dataset, states) {
     //console.log(dataset);
     events = dataset;
     // draw stack function
+    console.log(dataset[0])
     
-    var colorData = processStackData(dataset);
-    drawStack(colorData);
+    stackData = processStackData(dataset);
+    drawStack(stackData);
 
     // draw heat map below
-    var heatData = processHeatData(dataset);
+    heatData = processHeatData(dataset);
     drawHeat(heatData);
 
     drawDuration(dataset);
@@ -96,6 +119,7 @@ function readyToDraw(error, dataset, states) {
         .data(events)
         .enter()
         .append('circle')
+        .attr('class', 'event-point')
         .attr('cx', d => projection([d.lng, d.lat])[0])
         .attr('cy', d => projection([d.lng, d.lat])[1])
         .attr('r', 1.5)
@@ -110,7 +134,7 @@ var processStackData = function(data) {
     // count the appearance 
     var colorsData = data.reduce((newData, oldData) => {
         var color = oldData.color;
-        var day = oldData.date.getFullYear();
+        var day = oldData.year;
         if (day in newData) {
             if (color in newData[day]) {
                 newData[day][color]++;
@@ -124,6 +148,7 @@ var processStackData = function(data) {
         }
         return newData;
     }, {});
+
     result = [];
     for (var key in colorsData) {
         var item = {
@@ -155,7 +180,7 @@ var drawStack = function(colorData) {
     
     var yScale = d3.scaleLinear()
         .domain([0, maxSumCount])
-        .range([svgHeight - padding.b, padding.t]);
+        .range([(svgHeight - padding.b), padding.t]);
     
     var xAxis = d3.axisBottom()
         .scale(xScale);
@@ -219,6 +244,7 @@ var processHeatData = function(data) {
         return newData;
     }, {});
     //console.log(heatData);
+
     var result = [];
     for (var key in heatData) {
         var month = key.split(',')[0];
@@ -231,7 +257,8 @@ var processHeatData = function(data) {
             'day': +day
         }
         for (var v in heatData[key]) {
-            item[v] = heatData[key][v];
+            // filter color, if not selected set the value to be zero
+            item[v] =  heatData[key][v];
         }
         result.push(item);
     }
@@ -450,6 +477,7 @@ var drawSankey = function(data) {
         })
     }
 
+
     
     var nodePosition = {};
     var i;
@@ -461,10 +489,6 @@ var drawSankey = function(data) {
         links[i].target = nodePosition[links[i].target]
     })
     
-    console.log(links)
-    console.log(nodes);
-    
-    
     var sankey = d3.sankey()
         .nodeWidth(30)
         .nodePadding(5)
@@ -472,8 +496,6 @@ var drawSankey = function(data) {
 
     graph = sankey.nodes(nodes).links(links)();
 
-    console.log(graph)
-    
     sankey_svg.append('g')
         .attr('stroke', '#000')
         .selectAll('.node')
@@ -501,14 +523,36 @@ var drawSankey = function(data) {
         .append('path')
         .attr('class', 'link')
         .attr('d', d3.sankeyLinkHorizontal())
+        .style('stroke', d => d.color)
         .style('stroke-width', d => Math.max(1, d.width))
-        .style('fill', d => d.color)
-        .style('fill-opacity', 0.8)
-        
+        .style('stroke-opacity', 0.8)
+}
 
+var changeColor = function() {
+    
+    var selectedColor = d3.select("#colorSeletor").node().value; 
+    console.log('change color to ' + selectedColor);
 
+    var heatMaxColor = d3.max(heatData, (d) => {
+        var vals = d3.keys(d).map((key) => {
+            if (key != selectedColor) {
+                return 0;
+            }
+            return d[key];
+        });
+        //console.log(vals);
+        return d3.max(vals);
+    });
 
-        
+    console.log(heatMaxColor)
 
+    var opacityScale = d3.scaleLinear().domain([0, heatMaxColor]);
+    var cells = heat_svg.selectAll('.cell').selectAll('.color-cell')
+        .style('fill-opacity', d => {
+            return d.color == selectedColor ? opacityScale(d.value) : 0;
+        });
+    map_svg.selectAll('.event-point').style('fill-opacity', d => d.color == selectedColor ? 0.6 : 0);
+    sankey_svg.selectAll('.link').style('stroke', d => d.color == selectedColor ? d.color : 'gray')
+    
 
 }

@@ -7,8 +7,25 @@
 </head>
 <body>
     <div id="main">
+    var keys = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
+
+
+        <input type='number' name='start-day' id='start-day'>
+        <input type='number' name='end-day' id='end-day'>
+
         <svg id='stack' width="1000" height="600" style="border: 1px solid #777;"></svg>
+
         <svg id='heat' width="1000", height="600", style="border: 1px solid #777;background-color: #101d47;"></svg>
+                <select id='colorSeletor' onChange="changeColor()">
+            <option value='red'>red</option>
+            <option value='yellow'>yellow</option>
+            <option value='white'>white</option>
+            <option value='black'>black</option>
+            <option value='silver'>silver</option>
+            <option value='blue'>blue</option>
+            <option value='green'>green</option>
+            <option value='orange'>orange</option>
+        </select>
         <svg id='map' width="1000" height="600" style="border: 1px solid #777"></svg>
         <svg id='duration' width="1000" height="600" style="border: 1px solid #777;background-color: gray;"></svg>
         <svg id='sankey' width="1000" height="600" style="border: 1px solid #777;background-color:#d7e2f4"></svg>
