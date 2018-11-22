@@ -1,0 +1,32 @@
+#main {
+    padding: 10px;
+}
+
+.tooltip {
+    opacity: 1;
+}
+
+.tooltip .tooltip-inner {
+    background-color: #999;
+}
+
+.slider-handle.round {
+    background-image: linear-gradient(to bottom,#979797 0,#707070 100%);
+}
+
+label {
+    font-size: 13px;
+    font-weight: bold;
+    color: #555;
+    padding: 2px;
+}
+
+.legend circle {
+    stroke: #555;
+}
+
+.legend text {
+    font-family: "Open Sans";
+    font-size: 12px;
+    fill: #555;
+}

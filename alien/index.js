@@ -24,19 +24,27 @@ var color_filter = {
     'orange': true,
     'red': true,
 };
-var year_filter = {
-    'start': 0,
-    'end': 3000
-};
+
 
 var state_filter = {
 
 }
 
-var heatData;
 var stackData;
 
+months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+days = d3.range(1, 31);
 
+// Creates a bootstrap-slider element
+$("#yearSlider").slider({
+    tooltip: 'always',
+    tooltip_position:'bottom'
+});
+// Listens to the on "change" event for the slider
+$("#yearSlider").on('change', function(event){
+    // Update the chart on the new value
+    updateYear(event.value.newValue);
+});
 
 var validate = function(data) {
     if (data.country != 'us') {
@@ -87,27 +95,32 @@ function readyToDraw(error, dataset, states) {
     // draw stack function
     console.log(dataset[0])
     
-    stackData = processStackData(dataset);
+    initStack();
+    initHeat()
+    initMap(states);
+    updateYear([1920, 2018])
+    /*
+    stackData = processStackData(events);
     drawStack(stackData);
+    */
 
     // draw heat map below
-    heatData = processHeatData(dataset);
+    var heatData = processHeatData(events);
+
     drawHeat(heatData);
-
-    drawDuration(dataset);
-
-    drawSankey(dataset);
+    drawDuration(events);
+    drawSankey(events);
 
     // draw the map figure
-    var projection = d3.geoAlbersUsa();
-
-    var path = d3.geoPath()
-        .projection(projection);
-
-    events = events.filter(d => projection([d.lng, d.lat]) != null)
-
+    drawMap(dataset, states);
     console.log(events.length);
 
+}
+
+var initMap = function(states) {
+    var projection = d3.geoAlbersUsa();
+    var path = d3.geoPath()
+        .projection(projection);
     map_svg.selectAll('path')
         .data(states.features)
         .enter()
@@ -115,16 +128,25 @@ function readyToDraw(error, dataset, states) {
         .attr('d', path)
         .style('fill', 'gray');
 
-    map_svg.selectAll('.event-point')
-        .data(events)
-        .enter()
+}
+var drawMap = function(points) {
+    var projection = d3.geoAlbersUsa();
+    points = points.filter(d => projection([d.lng, d.lat]) != null)
+    
+    var mapPoint = map_svg.selectAll('.event-point')
+        .data(points, d => d.lat + '-' + d.lng)
+    
+    mapPoint.enter()
         .append('circle')
         .attr('class', 'event-point')
+        .merge(mapPoint)
         .attr('cx', d => projection([d.lng, d.lat])[0])
         .attr('cy', d => projection([d.lng, d.lat])[1])
         .attr('r', 1.5)
         .style('fill', d => d.color)
-        .style('fill-opacity', 0.6)
+        .style('fill-opacity', 0.6);
+
+    mapPoint.exit().remove();
 }
 
 
@@ -162,24 +184,14 @@ var processStackData = function(data) {
     return result;
 }
 
-var drawStack = function(colorData) {
-       // maxCount for some year
-    var maxSumCount = d3.max(colorData, (d) => {
-        var vals = d3.keys(d).map((key) => {
-            return key !== 'date' ? d[key] : 0;
-        });
-        return d3.sum(vals);
-    });
-
-    // set x, y scale
+var initStack = function() {
+        // set x, y scale
     var xScale = d3.scaleLinear()
-        .domain(d3.extent(colorData, (d) => {
-            return d.date;
-        }))
+        .domain([1930, 2020])
         .range([padding.l, svgWidth - padding.r]);
     
     var yScale = d3.scaleLinear()
-        .domain([0, maxSumCount])
+        .domain([0, 1800])
         .range([(svgHeight - padding.b), padding.t]);
     
     var xAxis = d3.axisBottom()
@@ -187,30 +199,6 @@ var drawStack = function(colorData) {
     
     var yAxis = d3.axisLeft()
         .scale(yScale)
-    
-    var stack = d3.stack();
-
-    var area = d3.area()
-        .x((d) => xScale(d.data.date))
-        .y0((d) => yScale(d[0]))
-        .y1((d) => yScale(d[1]));
-
-    var keys = [ 'white','red', 'yellow','black',  'silver','blue', 'green', 'orange'];
-    stack.keys(keys);
-    stack.order(d3.stackOrderNone);
-    stack.offset(d3.stackOffsetNone);
-
-    //console.log(stack(colorData));
-    var events = stack_svg.selectAll('.event')
-        .data(stack(colorData))
-        .enter()
-        .append('g')
-        .attr('class', (d) => d.key + ' event');
-    
-    events.append('path')
-        .attr('class', 'area')
-        .attr('d', area)
-        .style('fill', (d) => d.key);
 
     stack_svg.append('g')
         .attr('class', 'x axis')
@@ -221,6 +209,79 @@ var drawStack = function(colorData) {
         .attr('class', 'y axis')
         .attr('transform', 'translate(' + padding.l + ',0)')
         .call(yAxis);
+
+}
+
+var initHeat = function() {
+    var xScale = d3.scaleLinear()
+        .domain([1, 31])
+        .range([cellpadding, heatCellsize * 31])
+
+    var yScale = d3.scaleLinear()
+        .domain([1, 12])
+        .range([cellpadding, heatCellsize * 12])
+
+    var xAxis = d3.axisTop()
+        .scale(xScale);
+    
+    var yAxis = d3.axisLeft()
+        .scale(yScale)
+        .tickValues(months);
+    
+    heat_svg.append('g')
+        .attr('class', 'x axis')
+        .attr('transform', 'translate(' + (heatCellsize) + 
+            ',' + (heatCellsize) + ')')
+        .call(xAxis);
+
+    heat_svg.append('g')
+        .attr('class', 'y axis')
+        .attr('transform', 'translate(' + (heatCellsize) + 
+        ',' + (heatCellsize) + ')')
+        .call(yAxis);
+
+}
+var drawStack = function(colorData) {
+       // maxCount for some year
+    var maxSumCount = d3.max(colorData, (d) => {
+        var vals = d3.keys(d).map((key) => {
+            return key !== 'date' ? d[key] : 0;
+        });
+        return d3.sum(vals);
+    });
+    var xScale = d3.scaleLinear()
+        .domain([1930, 2020])
+        .range([padding.l, svgWidth - padding.r]);
+
+    var yScale = d3.scaleLinear()
+        .domain([0, 1800])
+        .range([(svgHeight - padding.b), padding.t]);
+
+    var stack = d3.stack();
+
+    var area = d3.area()
+        .x((d) => xScale(d.data.date))
+        .y0((d) => yScale(d[0]))
+        .y1((d) => yScale(d[1]));
+
+    var keys = [ 'white','red', 'yellow','black',  'silver','blue', 'green', 'orange'];
+
+    stack.keys(keys);
+    stack.order(d3.stackOrderNone);
+    stack.offset(d3.stackOffsetNone);
+
+    var stackArea = stack_svg.selectAll('.event')
+        .data(stack(colorData), d => d.color + ' area');
+
+    stackArea.exit().remove();
+    
+    stackArea.enter()
+        .append('g')
+        .attr('class', 'event')
+        .merge(stackArea)
+        .append('path')
+        .attr('d', area)
+        .style('fill', (d) => d.key);
 }
 
 var processHeatData = function(data) {
@@ -266,29 +327,7 @@ var processHeatData = function(data) {
 }
 
 var drawHeat = function(heatData) {
-
-    console.log(heatData);
-
-    var cells = [];
-    heatData.forEach((d) => {
-        cells.push(new HeatCell(d))
-    });
-
-    var heatMaxColor = d3.max(heatData, (d) => {
-        var vals = d3.keys(d).map((key) => {
-            if (key == 'month' || key == 'day') {
-                return 0;
-            }
-            return d[key];
-        });
-        //console.log(vals);
-        return d3.max(vals);
-    });
-    console.log(heatMaxColor);
-
-    var opacityScale = d3.scaleLinear().domain([0, heatMaxColor]);
-
-    HeatCell.prototype.init = function(g, data) {
+    HeatCell.prototype.update = function(g, data) {
 
         //console.log(data);
         // get the left-upper corner position
@@ -324,63 +363,50 @@ var drawHeat = function(heatData) {
         }
 
         //console.log(items);
-
         var cell = d3.select(g);
-
         var rects = cell.selectAll('.color-cell')
             .data(items, d => d.row + "-" + d.col)
 
-        var rectsEnter = rects.enter()
+        rects.enter()
             .append('rect')
             .attr('class', 'color-cell')
             .attr('x', d => d.col)
             .attr('y', d => d.row)
             .attr('width', colorCellsize)
             .attr('height', colorCellsize)
+            .merge(rects)
             .style('fill', d => d.color == 'unknown' ? 'gray':d.color)
-            .style('fill-opacity', d => opacityScale(d.color == 'unknown' ? 5: d.value))
-    }
+            .style('fill-opacity', d => opacityScale(d.color == 'unknown' ? 5: d.value)) 
 
-    var cellEnter = 
-        heat_svg.selectAll('.cell')
-            .data(cells)
-            .enter()
-            .append('g')
-            .attr('class', 'cell')
-    
-    cellEnter.each(function(cell){
-        cell.init(this, cell);
+        rects.exit().remove();
+
+    }
+    var heatMaxColor = d3.max(heatData, (d) => {
+        var vals = d3.keys(d).map((key) => {
+            if (key == 'month' || key == 'day') {
+                return 0;
+            }
+            return d[key];
+        });
+        //console.log(vals);
+        return d3.max(vals);
+    });
+    console.log(heatMaxColor);
+    var opacityScale = d3.scaleLinear().domain([0, heatMaxColor]);
+
+    var cells = [];
+    heatData.forEach(d => cells.push(new HeatCell(d)));
+    var heatCell = heat_svg.selectAll('.cell')
+            .data(cells, d => d.month + '-' + d.day)
+    var heatCellEnter = heatCell.enter()
+        .append('g')
+        .attr('class', 'cell')
+    heatCellEnter.each(function(cell){
+        cell.update(this, cell);
     });
 
-    months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    days = d3.range(1, 31);
+    heatCell.exit().remove();
 
-    var xScale = d3.scaleLinear()
-        .domain([1, 31])
-        .range([cellpadding, heatCellsize * 31])
-
-    var yScale = d3.scaleLinear()
-        .domain([1, 12])
-        .range([cellpadding, heatCellsize * 12])
-
-    var xAxis = d3.axisTop()
-        .scale(xScale);
-    
-    var yAxis = d3.axisLeft()
-        .scale(yScale)
-        .tickValues(months);
-    
-    heat_svg.append('g')
-        .attr('class', 'x axis')
-        .attr('transform', 'translate(' + (heatCellsize) + 
-            ',' + (heatCellsize) + ')')
-        .call(xAxis);
-
-    heat_svg.append('g')
-        .attr('class', 'y axis')
-        .attr('transform', 'translate(' + (heatCellsize) + 
-        ',' + (heatCellsize) + ')')
-        .call(yAxis);
 }
 
 var drawDuration = function(data) {
@@ -476,9 +502,6 @@ var drawSankey = function(data) {
             'color': source
         })
     }
-
-
-    
     var nodePosition = {};
     var i;
     for (i = 0; i < nodes.length; i++) {
@@ -554,5 +577,11 @@ var changeColor = function() {
     map_svg.selectAll('.event-point').style('fill-opacity', d => d.color == selectedColor ? 0.6 : 0);
     sankey_svg.selectAll('.link').style('stroke', d => d.color == selectedColor ? d.color : 'gray')
     
+}
 
+var updateYear = function(value) {
+    var updated = events.filter(d => d.year <= value[1] && d.year >= value[0]);
+    drawStack(processStackData(updated));
+    drawHeat(processHeatData(updated));
+    drawMap(updated);
 }

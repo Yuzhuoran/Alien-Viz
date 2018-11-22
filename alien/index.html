@@ -4,17 +4,25 @@
     <meta charset="UTF-8">
     <title>Alien-viz</title>
     <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/9.9.0/css/bootstrap-slider.min.css">
 </head>
 <body>
     <div id="main">
     var keys = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
 
 
-        <input type='number' name='start-day' id='start-day'>
-        <input type='number' name='end-day' id='end-day'>
+
+
 
         <svg id='stack' width="1000" height="600" style="border: 1px solid #777;"></svg>
-
+                <div style="padding: 4px 60px;">
+            <p>start yera</p>
+            <label for="yearSlider" style="margin-right:6px;">1900</label>
+            <input id="yearSlider" type="text" data-slider-min="1900" 
+            data-slider-max="2018" data-slider-step="1" data-slider-value="[1950,2000]" style="width: 800px;"/>
+            <label for="yearSlider"  style="margin-left:6px;">2018</label>
+        </div>
         <svg id='heat' width="1000", height="600", style="border: 1px solid #777;background-color: #101d47;"></svg>
                 <select id='colorSeletor' onChange="changeColor()">
             <option value='red'>red</option>
@@ -41,6 +49,10 @@
 <script src="https://unpkg.com/d3-path@1"></script>
 <script src="https://unpkg.com/d3-shape@1"></script>
 <script src="https://unpkg.com/d3-sankey@0"></script>
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.3/umd/popper.min.js" integrity="sha384-vFJXuSJphROIrBnz7yo7oB41mKfc8JzQZiCq4NCceLEaO4IHwicKwpJf9c9IpFgh" crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/9.9.0/bootstrap-slider.min.js"></script>
 <script src="./index.js"></script>
 
 </html>
