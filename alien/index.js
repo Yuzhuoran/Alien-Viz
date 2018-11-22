@@ -311,8 +311,6 @@ var drawStack = function(colorData) {
     var start = +yearValue.split(',')[0];
     var end = +yearValue.split(',')[1];
 
-    console.log(maxSumCount);
-
     var xScale = d3.scaleLinear()
         .domain([start, end])
         .range([padding.l, svgWidth - padding.r]);
@@ -327,14 +325,13 @@ var drawStack = function(colorData) {
     var yAxis = d3.axisLeft()
         .scale(yScale)
     
+    var keys = [ 'white','red', 'yellow','black',  'silver','blue', 'green', 'orange'];
     var stack = d3.stack();
 
     var area = d3.area()
         .x((d) => xScale(d.data.date))
         .y0((d) => yScale(d[0]))
         .y1((d) => yScale(d[1]));
-
-    var keys = [ 'white','red', 'yellow','black',  'silver','blue', 'green', 'orange'];
 
     stack.keys(keys);
     stack.order(d3.stackOrderNone);
@@ -649,7 +646,7 @@ var changeColor = function() {
     var heatData = processHeatData(updated)
     var heatMaxColor = d3.max(heatData, (d) => {
         var vals = d3.keys(d).map((key) => {
-            if (key != selectedColor) {
+            if (key != selectedColor && selectedColor != 'all') {
                 return 0;
             }
             return d[key];
@@ -661,12 +658,14 @@ var changeColor = function() {
     console.log(heatMaxColor)
 
     var opacityScale = d3.scaleLinear().domain([0, heatMaxColor]);
-    var cells = heat_svg.selectAll('.cell').selectAll('.color-cell')
+    heat_svg.selectAll('.cell').selectAll('.color-cell')
         .style('fill-opacity', d => {
-            return d.color == selectedColor ? opacityScale(d.value) : 0;
+            return (d.color == selectedColor || selectedColor == 'all') ? opacityScale(d.value) : 0;
         });
-    map_svg.selectAll('.event-point').style('fill-opacity', d => d.color == selectedColor ? 0.6 : 0);
-    sankey_svg.selectAll('.link').style('stroke', d => d.color == selectedColor ? d.color : 'gray')
+    map_svg.selectAll('.event-point').style('fill-opacity', d => 
+        (d.color == selectedColor || selectedColor == 'all') ? 0.6 : 0);
+    sankey_svg.selectAll('.link').style('stroke', d => 
+        (d.color == selectedColor || selectedColor == 'all') ? d.color : 'gray')
     
 }
 
@@ -691,5 +690,6 @@ var updateData = function() {
     drawStack(processStackData(updated));
     drawHeat(processHeatData(updated));
     drawMap(updated);
-    drawSankey(processSankeyData(updated))
+    drawSankey(processSankeyData(updated));
+    changeColor();
 }
