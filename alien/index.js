@@ -92,7 +92,9 @@ months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 
 days = d3.range(1, 31);
 
 var updated;
-var selectedState;
+var clickState;
+var selectedState = 'recover';
+
 
 
 // Creates a bootstrap-slider element
@@ -175,11 +177,7 @@ var initMap = function(states) {
     var projection = d3.geoAlbersUsa();
     var path = d3.geoPath()
         .projection(projection);
-    var stateNames = [];
-    states.features.forEach(
-        d => stateNames.push(d.properties.NAME)
-    );
-    console.log(stateNames)
+
     map_svg.selectAll('path')
         .data(states.features)
         .enter()
@@ -187,15 +185,14 @@ var initMap = function(states) {
         .attr('d', path)
         .style('fill', 'gray')
         .on('click', d => {
-            updateState(d.properties.NAME);
+            if (d === clickState) {
+                updateState('recover');
+                clickState = undefined;
+            } else {
+                clickState = d;
+                updateState(d.properties.NAME);
+            }
         });
-    var stateShort = {}
-    events.forEach(d => {
-        if (!(d.state in stateShort)) {
-            stateShort[d.state] = true;
-        }
-    })
-    console.log(stateShort);
 
 }
 var drawMap = function(points) {
@@ -431,27 +428,27 @@ var drawHeat = function(heatData) {
             }
             items.push({'color':key, 'value': data.colors[key]})
         }
-        items.push({'color': 'unknown', 'value': 0});
+        items.push({'color': 'gray', 'value': 0});
         for (var i = 0; i < items.length; i++) {
             items[i].row= colorCellPositions[i].row;
             items[i].col = colorCellPositions[i].col;
         }
-
-        //console.log(items);
         var cell = d3.select(g);
         var rects = cell.selectAll('.color-cell')
             .data(items, d => d.row + "-" + d.col)
-
         rects.enter()
             .append('rect')
             .attr('class', 'color-cell')
+            .merge(rects)
             .attr('x', d => d.col)
             .attr('y', d => d.row)
+            .attr('v', d => d.value)
             .attr('width', colorCellsize)
             .attr('height', colorCellsize)
-            .merge(rects)
-            .style('fill', d => d.color == 'unknown' ? 'gray':d.color)
-            .style('fill-opacity', d => opacityScale(d.color == 'unknown' ? 5: d.value)) 
+            .style('fill', d => d.color)
+            .style('fill-opacity', d => {
+                opacityScale(d.value);
+            }) 
 
         rects.exit().remove();
 
@@ -476,6 +473,8 @@ var drawHeat = function(heatData) {
     var heatCellEnter = heatCell.enter()
         .append('g')
         .attr('class', 'cell')
+        .merge(heatCell);
+        
     heatCellEnter.each(function(cell){
         cell.update(this, cell);
     });
@@ -502,8 +501,6 @@ var drawDuration = function(data) {
     var yScale = d3.scaleLinear()
         .domain([217, 0])
         .range([padding.t, svgHeight - padding.b]);
-
-    console.log(heightMap);
 
     duration_svg.selectAll('.color-bar')
         .data(data)
@@ -640,28 +637,34 @@ var drawSankey = function(graph) {
     links.exit().remove();
 }
 
-var changeColor = function() {
+var changeColor = function(heatData) {
     var selectedColor = d3.select("#colorSeletor").node().value; 
     console.log('change color to ' + selectedColor);
-    var heatData = processHeatData(updated)
+    var heatData = processHeatData(updated);
     var heatMaxColor = d3.max(heatData, (d) => {
         var vals = d3.keys(d).map((key) => {
-            if (key != selectedColor && selectedColor != 'all') {
+            if (key == 'day' || key == 'month') {
                 return 0;
             }
-            return d[key];
+            if (selectedColor == 'all' || key == selectedColor) {
+                return d[key];
+            }
+            return 0;
         });
         //console.log(vals);
         return d3.max(vals);
     });
 
-    console.log(heatMaxColor)
+    console.log('max: ' + heatMaxColor);
 
+    // update the DOM by the color filter
     var opacityScale = d3.scaleLinear().domain([0, heatMaxColor]);
+
     heat_svg.selectAll('.cell').selectAll('.color-cell')
         .style('fill-opacity', d => {
-            return (d.color == selectedColor || selectedColor == 'all') ? opacityScale(d.value) : 0;
+            return (d.color == selectedColor || selectedColor == 'all') ? opacityScale(d.value) : opacityScale(0);
         });
+
     map_svg.selectAll('.event-point').style('fill-opacity', d => 
         (d.color == selectedColor || selectedColor == 'all') ? 0.6 : 0);
     sankey_svg.selectAll('.link').style('stroke', d => 
@@ -670,26 +673,42 @@ var changeColor = function() {
 }
 
 var updateYear = function(yearValue) {
+    /*
     updated = events.filter(d => d.year <= yearValue[1] 
         && d.year >= yearValue[0]);
+        */
+    updated = events.filter(d => yearFilter(d, yearValue[0], yearValue[1]) & stateFilter(d, selectedState));
     updateData();
 
 }
 
 var updateState = function(state) {
     var yearValue = d3.select('#yearSlider').node().value;
-    selectedState = stateMapping[state].toLowerCase();
+    if (state != 'recover') {
+        selectedState = stateMapping[state].toLowerCase();
+    } else {
+        selectedState = 'recover';
+    }
     var start = +yearValue.split(',')[0];
     var end = +yearValue.split(',')[1];
-    updated = events.filter(d => d.year <= end 
-        && d.year >= start && d.state == selectedState) ;
+    updated = events.filter(d => (yearFilter(d, start, end) & stateFilter(d, selectedState))) ;
     updateData();
 }
 
 var updateData = function() {
+    var heatData = processHeatData(updated);
     drawStack(processStackData(updated));
-    drawHeat(processHeatData(updated));
+    drawHeat(heatData);
     drawMap(updated);
     drawSankey(processSankeyData(updated));
-    changeColor();
+    changeColor(heatData);
+}
+
+var yearFilter = function(d, start, end) {
+    return d.year >= start && d.year <= end;
+}
+
+var stateFilter = function(d, state) {
+    return state == 'recover' ? true: d.state == state;
+    
 }
