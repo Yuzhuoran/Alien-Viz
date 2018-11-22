@@ -82,12 +82,18 @@ var stateMapping =
     'Wyoming': 'WY'
 }
 
+var sankey = d3.sankey()
+    .nodeWidth(30)
+    .nodePadding(5)
+    .size([svgWidth - padding.l - padding.r, svgHeight - padding.t - padding.b])
+
 
 months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 days = d3.range(1, 31);
 
 var updated;
 var selectedState;
+
 
 // Creates a bootstrap-slider element
 $("#yearSlider").slider({
@@ -145,9 +151,17 @@ function readyToDraw(error, dataset, states) {
         console.error("can't load dataset");
     }
     //console.log(dataset);
+    var counter = 0;
 
     events = dataset; 
     updated = events;   
+    events.forEach(d => {
+        if (d.color == 'unknown') {
+            counter++;
+        }
+    });
+    console.log('unkown count: ' + counter)
+
     initStack();
     initHeat()
     initMap(states);
@@ -239,30 +253,14 @@ var processStackData = function(data) {
 }
 
 var initStack = function() {
-        // set x, y scale
-    var xScale = d3.scaleLinear()
-        .domain([1930, 2020])
-        .range([padding.l, svgWidth - padding.r]);
-    
-    var yScale = d3.scaleLinear()
-        .domain([0, 1800])
-        .range([(svgHeight - padding.b), padding.t]);
-    
-    var xAxis = d3.axisBottom()
-        .scale(xScale);
-    
-    var yAxis = d3.axisLeft()
-        .scale(yScale)
 
     stack_svg.append('g')
-        .attr('class', 'x axis')
+        .attr('class', 'stack-x-axis')
         .attr('transform', 'translate(0,' + (svgHeight - padding.b) + ')')
-        .call(xAxis);
     
     stack_svg.append('g')
-        .attr('class', 'y axis')
+        .attr('class', 'stack-y-axis')
         .attr('transform', 'translate(' + padding.l + ',0)')
-        .call(yAxis);
 
 }
 
@@ -295,6 +293,11 @@ var initHeat = function() {
         .call(yAxis);
 
 }
+
+var initDuration = function() {
+
+}
+
 var drawStack = function(colorData) {
        // maxCount for some year
     var maxSumCount = d3.max(colorData, (d) => {
@@ -303,14 +306,27 @@ var drawStack = function(colorData) {
         });
         return d3.sum(vals);
     });
+
+    var yearValue = d3.select('#yearSlider').node().value;
+    var start = +yearValue.split(',')[0];
+    var end = +yearValue.split(',')[1];
+
+    console.log(maxSumCount);
+
     var xScale = d3.scaleLinear()
-        .domain([1930, 2020])
+        .domain([start, end])
         .range([padding.l, svgWidth - padding.r]);
 
     var yScale = d3.scaleLinear()
-        .domain([0, 1800])
+        .domain([0, maxSumCount])
         .range([(svgHeight - padding.b), padding.t]);
 
+    var xAxis = d3.axisBottom()
+        .scale(xScale);
+    
+    var yAxis = d3.axisLeft()
+        .scale(yScale)
+    
     var stack = d3.stack();
 
     var area = d3.area()
@@ -336,6 +352,14 @@ var drawStack = function(colorData) {
         .append('path')
         .attr('d', area)
         .style('fill', (d) => d.key);
+
+    stack_svg.select('.stack-x-axis')
+        .transition()
+        .call(xAxis);
+    
+    stack_svg.select('.stack-y-axis')
+        .transition()
+        .call(yAxis);
 }
 
 var processHeatData = function(data) {
@@ -564,10 +588,8 @@ var processSankeyData = function(data) {
         links[i].source = nodePosition[links[i].source]
         links[i].target = nodePosition[links[i].target]
     })
-    return {
-        'links': links, 
-        'nodes': nodes
-    }
+    sankey.nodes(nodes).links(links);
+    return sankey();
 }
 
 var initSankey = function() {
@@ -580,15 +602,13 @@ var initSankey = function() {
         .attr('stroke-opacity', 0.5)
         .attr('class', 'link-group')
 
+
 }
 var drawSankey = function(graph) {
+    //console.log(data);
 
-    var sankey = d3.sankey()
-        .nodeWidth(30)
-        .nodePadding(5)
-        .size([svgWidth - padding.l - padding.r, svgHeight - padding.t - padding.b])
 
-    graph = sankey.nodes(graph.nodes).links(graph.links)();
+    //var graph = sankey.nodes(data.nodes).links(data.links)();
 
     var nodes = sankey_svg.select('.node-group')
         .selectAll('.node')
@@ -601,7 +621,7 @@ var drawSankey = function(graph) {
         .attr('x', d => d.x0)
         .attr('y', d => d.y0)
         .attr('height', d => d.y1 - d.y0)
-        .attr('width', sankey.nodeWidth())
+        .attr('width', 30)
         .append('title')
         .text(d => d.name);
 
