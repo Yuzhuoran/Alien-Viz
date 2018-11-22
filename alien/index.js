@@ -19,21 +19,75 @@ var HeatCell = function(colors) {
     this.colors = colors;
 }
 
-var color_filter = {
-    'yellow': true,
-    'orange': true,
-    'red': true,
-};
-
-
-var state_filter = {
-
+var stateMapping =
+{
+    'Alabama': 'AL',
+    'Alaska': 'AK',
+    'American Samoa': 'AS',
+    'Arizona': 'AZ',
+    'Arkansas': 'AR',
+    'California': 'CA',
+    'Colorado': 'CO',
+    'Connecticut': 'CT',
+    'Delaware': 'DE',
+    'District Of Columbia': 'DC',
+    'Federated States Of Micronesia': 'FM',
+    'Florida': 'FL',
+    'Georgia': 'GA',
+    'Guam': 'GU',
+    'Hawaii': 'HI',
+    'Idaho': 'ID',
+    'Illinois': 'IL',
+    'Indiana': 'IN',
+    'Iowa': 'IA',
+    'Kansas': 'KS',
+    'Kentucky': 'KY',
+    'Louisiana': 'LA',
+    'Maine': 'ME',
+    'Marshall Islands': 'MH',
+    'Maryland': 'MD',
+    'Massachusetts': 'MA',
+    'Michigan': 'MI',
+    'Minnesota': 'MN',
+    'Mississippi': 'MS',
+    'Missouri': 'MO',
+    'Montana': 'MT',
+    'Nebraska': 'NE',
+    'Nevada': 'NV',
+    'New Hampshire': 'NH',
+    'New Jersey': 'NJ',
+    'New Mexico': 'NM',
+    'New York': 'NY',
+    'North Carolina': 'NC',
+    'North Dakota': 'ND',
+    'Northern Mariana Islands': 'MP',
+    'Ohio': 'OH',
+    'Oklahoma': 'OK',
+    'Oregon': 'OR',
+    'Palau': 'PW',
+    'Pennsylvania': 'PA',
+    'Puerto Rico': 'PR',
+    'Rhode Island': 'RI',
+    'South Carolina': 'SC',
+    'South Dakota': 'SD',
+    'Tennessee': 'TN',
+    'Texas': 'TX',
+    'Utah': 'UT',
+    'Vermont': 'VT',
+    'Virgin Islands': 'VI',
+    'Virginia': 'VA',
+    'Washington': 'WA',
+    'West Virginia': 'WV',
+    'Wisconsin': 'WI',
+    'Wyoming': 'WY'
 }
 
-var stackData;
 
 months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 days = d3.range(1, 31);
+
+var updated;
+var selectedState;
 
 // Creates a bootstrap-slider element
 $("#yearSlider").slider({
@@ -91,31 +145,43 @@ function readyToDraw(error, dataset, states) {
         console.error("can't load dataset");
     }
     //console.log(dataset);
-    events = dataset;
-    // draw stack function
-    console.log(dataset[0])
-    
+
+    events = dataset; 
+    updated = events;   
     initStack();
     initHeat()
     initMap(states);
     initSankey();
     updateYear([1920, 2018])
     drawDuration(events);
-    drawSankey(processSankeyData(events));
     console.log(events.length);
-
 }
 
 var initMap = function(states) {
     var projection = d3.geoAlbersUsa();
     var path = d3.geoPath()
         .projection(projection);
+    var stateNames = [];
+    states.features.forEach(
+        d => stateNames.push(d.properties.NAME)
+    );
+    console.log(stateNames)
     map_svg.selectAll('path')
         .data(states.features)
         .enter()
         .append('path')
         .attr('d', path)
-        .style('fill', 'gray');
+        .style('fill', 'gray')
+        .on('click', d => {
+            updateState(d.properties.NAME);
+        });
+    var stateShort = {}
+    events.forEach(d => {
+        if (!(d.state in stateShort)) {
+            stateShort[d.state] = true;
+        }
+    })
+    console.log(stateShort);
 
 }
 var drawMap = function(points) {
@@ -137,7 +203,6 @@ var drawMap = function(points) {
 
     mapPoint.exit().remove();
 }
-
 
 var processStackData = function(data) {
     // return [items], where items: ['date', 'colors'..]
@@ -525,7 +590,6 @@ var drawSankey = function(graph) {
 
     graph = sankey.nodes(graph.nodes).links(graph.links)();
 
-    console.log(graph);
     var nodes = sankey_svg.select('.node-group')
         .selectAll('.node')
         .data(graph.nodes)
@@ -560,10 +624,9 @@ var drawSankey = function(graph) {
 }
 
 var changeColor = function() {
-    
     var selectedColor = d3.select("#colorSeletor").node().value; 
     console.log('change color to ' + selectedColor);
-
+    var heatData = processHeatData(updated)
     var heatMaxColor = d3.max(heatData, (d) => {
         var vals = d3.keys(d).map((key) => {
             if (key != selectedColor) {
@@ -587,8 +650,24 @@ var changeColor = function() {
     
 }
 
-var updateYear = function(value) {
-    var updated = events.filter(d => d.year <= value[1] && d.year >= value[0]);
+var updateYear = function(yearValue) {
+    updated = events.filter(d => d.year <= yearValue[1] 
+        && d.year >= yearValue[0]);
+    updateData();
+
+}
+
+var updateState = function(state) {
+    var yearValue = d3.select('#yearSlider').node().value;
+    selectedState = stateMapping[state].toLowerCase();
+    var start = +yearValue.split(',')[0];
+    var end = +yearValue.split(',')[1];
+    updated = events.filter(d => d.year <= end 
+        && d.year >= start && d.state == selectedState) ;
+    updateData();
+}
+
+var updateData = function() {
     drawStack(processStackData(updated));
     drawHeat(processHeatData(updated));
     drawMap(updated);

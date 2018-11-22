@@ -9,9 +9,14 @@
 </head>
 <body>
     <div id="main">
-    var keys = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
         <svg id='stack' width="1000" height="600" style="border: 1px solid #777;"></svg>
-
+                <div style="padding: 4px 60px;">
+            <p>start yera</p>
+            <label for="yearSlider" style="margin-right:6px;">1900</label>
+            <input id="yearSlider" type="text" data-slider-min="1900" 
+            data-slider-max="2018" data-slider-step="1" data-slider-value="[1950,2000]" style="width: 800px;"/>
+            <label for="yearSlider"  style="margin-left:6px;">2018</label>
+        </div>
         <svg id='heat' width="1000", height="600", style="border: 1px solid #777;background-color: #101d47;"></svg>
                 <select id='colorSeletor' onChange="changeColor()">
             <option value='red'>red</option>
@@ -25,13 +30,7 @@
         </select>
         <svg id='map' width="1000" height="600" style="border: 1px solid #777"></svg>
         <svg id='duration' width="1000" height="600" style="border: 1px solid #777;background-color: gray;"></svg>
-        <div style="padding: 4px 60px;">
-            <p>start yera</p>
-            <label for="yearSlider" style="margin-right:6px;">1900</label>
-            <input id="yearSlider" type="text" data-slider-min="1900" 
-            data-slider-max="2018" data-slider-step="1" data-slider-value="[1950,2000]" style="width: 800px;"/>
-            <label for="yearSlider"  style="margin-left:6px;">2018</label>
-        </div>
+
         <svg id='sankey' width="1000" height="600" style="border: 1px solid #777;background-color:#d7e2f4"></svg>
     </div>
 </body>
