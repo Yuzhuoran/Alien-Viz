@@ -98,21 +98,10 @@ function readyToDraw(error, dataset, states) {
     initStack();
     initHeat()
     initMap(states);
+    initSankey();
     updateYear([1920, 2018])
-    /*
-    stackData = processStackData(events);
-    drawStack(stackData);
-    */
-
-    // draw heat map below
-    var heatData = processHeatData(events);
-
-    drawHeat(heatData);
     drawDuration(events);
-    drawSankey(events);
-
-    // draw the map figure
-    drawMap(dataset, states);
+    drawSankey(processSankeyData(events));
     console.log(events.length);
 
 }
@@ -391,13 +380,13 @@ var drawHeat = function(heatData) {
         //console.log(vals);
         return d3.max(vals);
     });
-    console.log(heatMaxColor);
     var opacityScale = d3.scaleLinear().domain([0, heatMaxColor]);
 
     var cells = [];
     heatData.forEach(d => cells.push(new HeatCell(d)));
     var heatCell = heat_svg.selectAll('.cell')
             .data(cells, d => d.month + '-' + d.day)
+
     var heatCellEnter = heatCell.enter()
         .append('g')
         .attr('class', 'cell')
@@ -441,10 +430,9 @@ var drawDuration = function(data) {
         .attr('height', barHeight)
         .style('fill', d => d.color)
         .style('fill-opacity', 0.05)
-        
 }
 
-var drawSankey = function(data) {
+var processSankeyData = function(data) {
     var shapeTransform = {
         'changing':'changing',
         'chevron': 'chevron',
@@ -511,44 +499,64 @@ var drawSankey = function(data) {
         links[i].source = nodePosition[links[i].source]
         links[i].target = nodePosition[links[i].target]
     })
-    
+    return {
+        'links': links, 
+        'nodes': nodes
+    }
+}
+
+var initSankey = function() {
+    sankey_svg.append('g')
+        .attr('stroke', '#000')
+        .attr('class', 'node-group')
+
+    sankey_svg.append('g')
+        .attr('fill', 'none')
+        .attr('stroke-opacity', 0.5)
+        .attr('class', 'link-group')
+
+}
+var drawSankey = function(graph) {
+
     var sankey = d3.sankey()
         .nodeWidth(30)
         .nodePadding(5)
         .size([svgWidth - padding.l - padding.r, svgHeight - padding.t - padding.b])
 
-    graph = sankey.nodes(nodes).links(links)();
+    graph = sankey.nodes(graph.nodes).links(graph.links)();
 
-    sankey_svg.append('g')
-        .attr('stroke', '#000')
+    console.log(graph);
+    var nodes = sankey_svg.select('.node-group')
         .selectAll('.node')
         .data(graph.nodes)
-        .enter()
+
+    nodes.enter()
         .append('rect')
         .attr('class', 'node')
+        .merge(nodes)
         .attr('x', d => d.x0)
         .attr('y', d => d.y0)
         .attr('height', d => d.y1 - d.y0)
         .attr('width', sankey.nodeWidth())
         .append('title')
-        .text(d => d.name)
-        
+        .text(d => d.name);
 
-    var linkSelection = 
-        sankey_svg.append('g')
-            .attr('fill', 'none')
-            .attr('stroke-opacity', 0.5)
+    nodes.exit().remove();
+    
+    var links = sankey_svg.select('.link-group')
             .selectAll('.link')
             .data(graph.links)
-            .enter()
-
-    linkSelection
+            
+    links.enter()
         .append('path')
         .attr('class', 'link')
+        .merge(links)
         .attr('d', d3.sankeyLinkHorizontal())
         .style('stroke', d => d.color)
         .style('stroke-width', d => Math.max(1, d.width))
-        .style('stroke-opacity', 0.8)
+        .style('stroke-opacity', 0.8);
+
+    links.exit().remove();
 }
 
 var changeColor = function() {
@@ -584,4 +592,5 @@ var updateYear = function(value) {
     drawStack(processStackData(updated));
     drawHeat(processHeatData(updated));
     drawMap(updated);
+    drawSankey(processSankeyData(updated))
 }
