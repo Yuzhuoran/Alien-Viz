@@ -85,7 +85,10 @@ var stateMapping =
 var sankey = d3.sankey()
     .nodeWidth(30)
     .nodePadding(5)
+    .nodeAlign(d3.sankeyRight)
     .size([svgWidth - padding.l - padding.r, svgHeight - padding.t - padding.b])
+
+
 
 
 months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -608,6 +611,7 @@ var processSankeyData = function(data) {
     links.forEach((d, i) => {
         links[i].source = nodePosition[links[i].source];
         links[i].target = nodePosition[links[i].target];
+        /*
         var j;
         for (j = 0; j < nodes.length; j++) {
             if (nodes.name == d.source) {
@@ -617,9 +621,12 @@ var processSankeyData = function(data) {
                 node.value += d.value;
             }
         }
+        */
     });
-    sankey.nodes(nodes).links(links);
-    return sankey();
+    //nodes.sort((a, b) => (b.value - a.value))
+    var graph = sankey.nodes(nodes).links(links)();
+    //sankey.nodeAlign(d3.sankeyLeft(sankey().nodes));
+    return graph;
 }
 
 var initSankey = function() {
