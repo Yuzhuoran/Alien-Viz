@@ -168,6 +168,7 @@ function readyToDraw(error, dataset, states) {
     initHeat()
     initMap(states);
     initSankey();
+    initDuration();
     updateYear([1920, 2018])
     drawDuration(events);
     console.log(events.length);
@@ -293,6 +294,13 @@ var initHeat = function() {
 
 var initDuration = function() {
 
+    duration_svg.append('g')
+        .attr('class', 'duration-x-axis')
+        .attr('transform', 'translate(0,' + (svgHeight - padding.b) + ')')
+
+    duration_svg.append('g')
+        .attr('class', 'duration-y-axis')
+        .attr('transform', 'translate(' + padding.l + ',0)')
 }
 
 var drawStack = function(colorData) {
@@ -400,8 +408,6 @@ var processHeatData = function(data) {
 
 var drawHeat = function(heatData) {
     HeatCell.prototype.update = function(g, data) {
-
-        //console.log(data);
         // get the left-upper corner position
         var month = +data.colors.month;
         var day = +data.colors.day;
@@ -502,20 +508,41 @@ var drawDuration = function(data) {
         .domain([217, 0])
         .range([padding.t, svgHeight - padding.b]);
 
-    duration_svg.selectAll('.color-bar')
-        .data(data)
+    var xAxis = d3.axisBottom()
+        .scale(xScale);
+    
+    var yAxis = d3.axisLeft()
+        .scale(yScale)
+    
+    var durationBar = duration_svg.selectAll('.color-bar')
+        .data(data, d => d.duration + '-' + d.color);
+
+    durationBar
         .enter()
         .append('rect')
         .attr('class', 'color-bar')
+        .merge(durationBar)
         .attr('x', d => xScale(d.duration))
         .attr('y', d => yScale(heightMap[d.color]))
         .attr('width', barWidth)
         .attr('height', barHeight)
         .style('fill', d => d.color)
-        .style('fill-opacity', 0.05)
+        .style('fill-opacity', 0.05);
+    
+    durationBar.exit().remove();
+    
+    duration_svg.select('.duration-x-axis')
+        .transition()
+        .call(xAxis);
+    
+    duration_svg.select('.duration-y-axis')
+        .transition()
+        .call(yAxis);
+        
 }
 
 var processSankeyData = function(data) {
+    console.log(data.length);
     var shapeTransform = {
         'changing':'changing',
         'chevron': 'chevron',
@@ -535,7 +562,7 @@ var processSankeyData = function(data) {
         "sphere": 'circle',
         'flash':'light'
     }
-    var colors = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
+    //var colors = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
     // source, target, count
     var temp = {};
     data.forEach((d) => {
@@ -560,11 +587,11 @@ var processSankeyData = function(data) {
         var value = temp[key];
         if (!(source in nodeCollection)) {
             nodeCollection[source] = true;
-            nodes.push({'name': source});
+            nodes.push({'name': source, 'value': 0});
         }
         if (!(target in nodeCollection)) {
             nodeCollection[target] = true;
-            nodes.push({'name': target});
+            nodes.push({'name': target, 'value': 0});
         }
         links.push({
             'source': source,
@@ -579,9 +606,18 @@ var processSankeyData = function(data) {
         nodePosition[nodes[i].name] = i;
     }
     links.forEach((d, i) => {
-        links[i].source = nodePosition[links[i].source]
-        links[i].target = nodePosition[links[i].target]
-    })
+        links[i].source = nodePosition[links[i].source];
+        links[i].target = nodePosition[links[i].target];
+        var j;
+        for (j = 0; j < nodes.length; j++) {
+            if (nodes.name == d.source) {
+                nodes.value += d.value;
+            }
+            if (nodes.name == d.target) {
+                node.value += d.value;
+            }
+        }
+    });
     sankey.nodes(nodes).links(links);
     return sankey();
 }
@@ -600,10 +636,8 @@ var initSankey = function() {
 }
 var drawSankey = function(graph) {
     //console.log(data);
-
-
     //var graph = sankey.nodes(data.nodes).links(data.links)();
-
+    console.log(graph);
     var nodes = sankey_svg.select('.node-group')
         .selectAll('.node')
         .data(graph.nodes)
@@ -637,7 +671,7 @@ var drawSankey = function(graph) {
     links.exit().remove();
 }
 
-var changeColor = function(heatData) {
+var changeColor = function() {
     var selectedColor = d3.select("#colorSeletor").node().value; 
     console.log('change color to ' + selectedColor);
     var heatData = processHeatData(updated);
@@ -696,12 +730,12 @@ var updateState = function(state) {
 }
 
 var updateData = function() {
-    var heatData = processHeatData(updated);
     drawStack(processStackData(updated));
-    drawHeat(heatData);
+    drawHeat(processHeatData(updated));
     drawMap(updated);
     drawSankey(processSankeyData(updated));
-    changeColor(heatData);
+    drawDuration(updated);
+    changeColor();
 }
 
 var yearFilter = function(d, start, end) {
