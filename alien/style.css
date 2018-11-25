@@ -30,3 +30,19 @@ label {
     font-size: 12px;
     fill: #555;
 }
+
+p {
+    color: white;
+}
+
+.ticks path{
+    stroke: #2d445c
+}
+
+.ticks text {
+    fill: #2d445c
+}
+
+.ticks line {
+    stroke: #2d445c
+}
