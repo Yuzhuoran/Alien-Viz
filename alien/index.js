@@ -85,20 +85,14 @@ var stateMapping =
 var sankey = d3.sankey()
     .nodeWidth(30)
     .nodePadding(5)
-    .nodeAlign(d3.sankeyRight)
     .size([svgWidth - padding.l - padding.r, svgHeight - padding.t - padding.b])
 
-
-
-
-months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-days = d3.range(1, 31);
+var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+var days = d3.range(1, 31);
 
 var updated;
 var clickState;
 var selectedState = 'recover';
-
-
 
 // Creates a bootstrap-slider element
 $("#yearSlider").slider({
@@ -156,17 +150,8 @@ function readyToDraw(error, dataset, states) {
         console.error("can't load dataset");
     }
     //console.log(dataset);
-    var counter = 0;
-
     events = dataset; 
     updated = events;   
-    events.forEach(d => {
-        if (d.color == 'unknown') {
-            counter++;
-        }
-    });
-    console.log('unkown count: ' + counter)
-
     initStack();
     initHeat()
     initMap(states);
@@ -445,6 +430,7 @@ var drawHeat = function(heatData) {
         var cell = d3.select(g);
         var rects = cell.selectAll('.color-cell')
             .data(items, d => d.row + "-" + d.col)
+
         rects.enter()
             .append('rect')
             .attr('class', 'color-cell')
@@ -523,7 +509,7 @@ var drawDuration = function(data) {
     durationBar
         .enter()
         .append('rect')
-        .attr('class', 'color-bar')
+        .attr('class', d => 'color-bar')
         .merge(durationBar)
         .attr('x', d => xScale(d.duration))
         .attr('y', d => yScale(heightMap[d.color]))
@@ -611,22 +597,8 @@ var processSankeyData = function(data) {
     links.forEach((d, i) => {
         links[i].source = nodePosition[links[i].source];
         links[i].target = nodePosition[links[i].target];
-        /*
-        var j;
-        for (j = 0; j < nodes.length; j++) {
-            if (nodes.name == d.source) {
-                nodes.value += d.value;
-            }
-            if (nodes.name == d.target) {
-                node.value += d.value;
-            }
-        }
-        */
     });
-    //nodes.sort((a, b) => (b.value - a.value))
-    var graph = sankey.nodes(nodes).links(links)();
-    //sankey.nodeAlign(d3.sankeyLeft(sankey().nodes));
-    return graph;
+    return sankey.nodes(nodes).links(links)();
 }
 
 var initSankey = function() {
@@ -638,13 +610,9 @@ var initSankey = function() {
         .attr('fill', 'none')
         .attr('stroke-opacity', 0.5)
         .attr('class', 'link-group')
-
-
 }
 var drawSankey = function(graph) {
-    //console.log(data);
-    //var graph = sankey.nodes(data.nodes).links(data.links)();
-    console.log(graph);
+    //console.log(graph);
     var nodes = sankey_svg.select('.node-group')
         .selectAll('.node')
         .data(graph.nodes)
@@ -678,7 +646,7 @@ var drawSankey = function(graph) {
     links.exit().remove();
 }
 
-var changeColor = function() {
+var updateColor = function() {
     var selectedColor = d3.select("#colorSeletor").node().value; 
     console.log('change color to ' + selectedColor);
     var heatData = processHeatData(updated);
@@ -696,20 +664,19 @@ var changeColor = function() {
         return d3.max(vals);
     });
 
-    console.log('max: ' + heatMaxColor);
-
+    //console.log('max: ' + heatMaxColor);
     // update the DOM by the color filter
     var opacityScale = d3.scaleLinear().domain([0, heatMaxColor]);
-
     heat_svg.selectAll('.cell').selectAll('.color-cell')
         .style('fill-opacity', d => {
             return (d.color == selectedColor || selectedColor == 'all') ? opacityScale(d.value) : opacityScale(0);
         });
-
     map_svg.selectAll('.event-point').style('fill-opacity', d => 
         (d.color == selectedColor || selectedColor == 'all') ? 0.6 : 0);
     sankey_svg.selectAll('.link').style('stroke', d => 
-        (d.color == selectedColor || selectedColor == 'all') ? d.color : 'gray')
+        (d.color == selectedColor || selectedColor == 'all') ? d.color : 'gray');
+    duration_svg.selectAll('.color-bar').style('fill', d => 
+        (d.color == selectedColor || selectedColor == 'all') ? d.color : 'gray');
     
 }
 
@@ -742,7 +709,7 @@ var updateData = function() {
     drawMap(updated);
     drawSankey(processSankeyData(updated));
     drawDuration(updated);
-    changeColor();
+    updateColor();
 }
 
 var yearFilter = function(d, start, end) {

@@ -12,7 +12,7 @@
         <svg id='stack' width="1000" height="600" style="border: 1px solid #777;"></svg>
 
         <svg id='heat' width="1000", height="600", style="border: 1px solid #777;"></svg>
-                <select id='colorSeletor' onChange="changeColor()">
+        <select id='colorSeletor' onChange="updateColor()">
             <option value='all'>all</option>
             <option value='red'>red</option>
             <option value='yellow'>yellow</option>
@@ -25,7 +25,7 @@
         </select>
         <svg id='map' width="1000" height="600" style="border: 1px solid #777"></svg>
         <svg id='duration' width="1000" height="600" style="border: 1px solid #777;background-color:white"></svg>
-                <div style="padding: 4px 60px;">
+        <div style="padding: 4px 60px;">
             <p>start yera</p>
             <label for="yearSlider" style="margin-right:6px;">1940</label>
             <input id="yearSlider" type="text" data-slider-min="1940" 
@@ -46,10 +46,7 @@
 <script src="https://unpkg.com/d3-path@1"></script>
 <script src="https://unpkg.com/d3-shape@1"></script>
 <script src="https://unpkg.com/d3-sankey@0"></script>
-
-<script src="/thirdparty/sankey2.js"></script>
 -->
-
 
 <script src="/thirdparty/d3-sankey.js"></script>
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
@@ -57,5 +54,4 @@
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/js/bootstrap.min.js" integrity="sha384-alpBpkh1PFOepccYVYDB4do5UnbKysX5WZXm3XxPqe5iKTfUKjNkCk9SaVuEZflJ" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/9.9.0/bootstrap-slider.min.js"></script>
 <script src="./index.js"></script>
-
 </html>
