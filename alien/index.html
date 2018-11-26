@@ -37,15 +37,20 @@
         <svg id='duration' width="1000" height="600" style="border: 1px solid #777;background-color:white"></svg>
         <svg id='sankey' width="1000" height="600" style="border: 1px solid #777;background-color:#d7e2f4"></svg>
     </div>
-    <div id="viz" width="1440" style="background-color:#0d1d38"> 
+    <div id="viz" width="1440px" style="background-color:#0d1d38"> 
+            <div class='row'>
+                <div class='col-sm-2'></div>
+                <div class='col-sm-10'>
+                    <svg id='temp'></svg>
+                </div>
+            </div>
             <svg id="intro" width="1440" height="849"></svg>
             <div id="amountFilter" >
                 <p align='center'>STATES & COLORS & AMOUNTS</p>
                 <p align='center'>Drag tbe timeline and select a state to observe trends over years</p>
-                <label for="stateSelect" style="padding-left:100px;color:white">STATE</label>
             </div>
-
-            <svg id="stackSVG" width="1440" height="650"></svg>
+            <svg id="stackSVG" width="1440" height="650">
+            </svg>
             <svg id="heatSVG" width="1440" heihgt="849"></svg>
             <svg id="sankeySVG" width="1440" height="850"></svg>
             <svg id="mapSVG" width="1440" height="850"></svg>
@@ -56,13 +61,6 @@
     <script src="/thirdparty/d3v4+jetpack.js"></script>
 -->
 <script src="https://d3js.org/d3.v4.js"></script>
-<!--
-<script src="https://unpkg.com/d3-array@1"></script>
-<script src="https://unpkg.com/d3-collection@1"></script>
-<script src="https://unpkg.com/d3-path@1"></script>
-<script src="https://unpkg.com/d3-shape@1"></script>
-<script src="https://unpkg.com/d3-sankey@0"></script>
--->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-tip/0.9.1/d3-tip.min.js"></script>
 <script src="/thirdparty/d3-sankey.js"></script>
 <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>

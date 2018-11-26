@@ -1,20 +1,8 @@
-tip = d3.tip().attr('class', 'd3-tip').html(d => d.duration);
-
 var stack_svg = d3.select('#stack');
 var heat_svg = d3.select('#heat');
 var map_svg = d3.select('#map');
 var duration_svg = d3.select('#duration');
 var sankey_svg = d3.select('#sankey');
-
-var stackSVG = d3.select('#stackSVG');
-var stackSVGWidth = +stackSVG.attr('width');
-var stackSVGheighth = +stackSVG.attr('height');
-
-var stackpadding = {t: 300, l:151, r:151, b:151}
-var stackInnerHeight = stackSVGheighth - stackpadding.t - stackpadding.b;
-var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
-
-duration_svg.call(tip);
 
 var svgWidth = +stack_svg.attr('width');
 var svgHeight = +stack_svg.attr('height');
@@ -103,10 +91,8 @@ var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oc
 var days = d3.range(1, 31);
 
 var updated;
-var stackUpdated;
 var clickState;
 var selectedState = 'recover';
-var stackSelectedState = 'all';
 
 // Creates a bootstrap-slider element
 $("#yearSlider").slider({
@@ -123,7 +109,7 @@ var validate = function(data) {
     if (data.country != 'us') {
         return false;
     }
-    if (data.duration >= 5000) {
+    if (data.duration >= 100000) {
         return false;
     }
     for (var key in data) {
@@ -171,7 +157,7 @@ function readyToDraw(error, dataset, states) {
     initMap(states);
     initSankey();
     initDuration();
-    updateYear([1940, 2018])
+    updateYear([1920, 2018])
     drawDuration(events);
     console.log(events.length);
 }
@@ -220,7 +206,7 @@ var drawMap = function(points) {
 
 var processStackData = function(data) {
     // return [items], where items: ['date', 'colors'..]
-    var type = ['black', 'silver', 'white','blue', 'green', 'yellow', 'orange', 'red'];
+    var type = ['white','orange', 'red', 'green', 'blue', 'black', 'silver', 'yellow'];
     // count the appearance 
     var colorsData = data.reduce((newData, oldData) => {
         var color = oldData.color;
@@ -250,142 +236,18 @@ var processStackData = function(data) {
         result.push(item);
     }
     return result;
-    
 }
 
 var initStack = function() {
-    var inner = stackSVG.append('g')
-        .attr('class', 'inner')
-        .attr('transform', 'translate(' + stackpadding.l + ',' + stackpadding.t + ")");
+
+    stack_svg.append('g')
+        .attr('class', 'stack-x-axis')
+        .attr('transform', 'translate(0,' + (svgHeight - padding.b) + ')')
     
-    inner.append('g')
-        .attr('class', 'stackSVG-x-axis ticks')
-        .attr('transform', 'translate(0,' + stackInnerHeight + ')');
-    
-    inner.append('g')
-        .attr('class', 'stackSVG-y-axis ticks')
-        .attr('transform', 'translate(' + stackInnerWidth + ',)');
+    stack_svg.append('g')
+        .attr('class', 'stack-y-axis')
+        .attr('transform', 'translate(' + padding.l + ',0)')
 
-    var yearAxisStart = 300;
-    var x = d3.scaleLinear()
-        .domain([1940, 2014])
-        .range([yearAxisStart, stackInnerWidth]);
-
-    function dragstarted(d) {
-        d3.select(this).raise().classed("active", true);
-        d3.select(this).style('cursor', 'pointer');
-    }
-    var end = [{
-        'x': stackInnerWidth,
-        'y': 5,
-        'r': 6
-    }];
-
-    var start = [{
-        'x': yearAxisStart,
-        'y': 5,
-        'r': 6
-    }];
-
-    function leftDragged(d) {
-        //d3.select(this).attr("cx", d3.event.x).attr("cy", d3.event.y);
-        var pos = d3.event.x;
-        var rightBoundary = +d3.select('#filter1end').attr('cx');
-        pos = Math.min(rightBoundary, Math.max(pos, yearAxisStart));
-        d3.select(this).attr('cx', d => d.x = pos)
-        stackYearFilter(Math.round(x.invert(pos)), Math.round(+x.invert(rightBoundary)));
-        //console.log('interval is ' + x.invert(pos) + ', ' + x.invert(rightBoundary));
-    }
-      
-    function dragended(d) {
-        d3.select(this).classed("active", false);
-        d3.select(this).style('cursor', 'default');
-    }
-
-    function rightDragged(d) {
-        var pos = d3.event.x;
-        var leftBoundary = +d3.select('#filter1start').attr('cx');
-        pos = Math.min(stackInnerWidth, Math.max(pos, leftBoundary));
-        d3.select(this).attr('cx', d => d.x = pos)
-        stackYearFilter(Math.round(x.invert(leftBoundary)), Math.round(+x.invert(pos)));
-        //console.log('interval is ' + x.invert(leftBoundary), x.invert(pos));
-    }
-
-    var leftDrag = d3.drag();
-    var rightDrag = d3.drag();
-
-    rightDrag.on('drag', rightDragged)
-        .on('start', dragstarted)
-        .on('end', dragended);
-    
-    leftDrag.on('start', dragstarted)
-        .on('end', dragended)
-        .on('drag', leftDragged);
-
-    var slider = stackSVG.append('g')
-        .attr('class', 'slider')
-        .attr('transform', 'translate(' + stackpadding.l + ',' + 160 + ')');
-
-    slider.append('text')
-        .attr('transform', 'translate(' + 200 + ',10)')
-        .text('YEAR')
-        .attr('fill', 'white');
-
-    var dropdown = stackSVG.append('g')
-        .attr('class', 'dropdown')
-        .attr('transform', 'translate(' + stackpadding.l + ',' + 160 + ')');
-    
-    dropdown.append('text')
-        .attr('transform', 'translate(0, 10)')
-        .text('STATE')
-        .attr('fill', 'white');
-
-    var track = slider.append('line')
-        .attr('class', 'track')
-        .attr('x1', x.range()[0])
-        .attr('x2', x.range()[1]);
-    
-    var ticks = slider.append('g')
-        .attr('class', 'ticks')
-        .attr('transform', 'translate(0, 4)')
-        .call(d3.axisTop().scale(x));
-    
-    var handleLeft = slider.selectAll('.handleStart')
-        .data(start)
-
-    handleLeft.enter()
-        .append('circle')
-        .attr('class', 'hanldStart')
-        .merge(handleLeft)
-        .attr('r', d => d.r)
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y)
-        .attr('id', 'filter1start')
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2)
-        .attr('fill', '#868e9b')
-        .call(leftDrag);
-
-    handleLeft.exit().remove();
-
-    var handleRight = slider.selectAll('.handleEnd')
-        .data(end)
-
-    handleRight.enter()
-        .append('circle')
-        .attr('class', 'hanldEnd')
-        .merge(handleRight)
-        .attr('r', d => d.r)
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y)
-        .attr('id', 'filter1end')
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2)
-        .attr('fill', '#868e9b')
-        .call(rightDrag);
-    
-    handleRight.exit().remove();
-    
 }
 
 var initHeat = function() {
@@ -437,68 +299,57 @@ var drawStack = function(colorData) {
         });
         return d3.sum(vals);
     });
-    var yearAxisStart = 300;
-    var filterScale = d3.scaleLinear()
-        .domain([1940, 2014])
-        .range([yearAxisStart, stackInnerWidth]);
 
-    var start = Math.round(filterScale.invert(+d3.select('#filter1start').attr('cx')));
-    var end = Math.round(filterScale.invert(+d3.select('#filter1end').attr('cx')));
-    var stackxScale = d3.scaleLinear()
+    var yearValue = d3.select('#yearSlider').node().value;
+    var start = +yearValue.split(',')[0];
+    var end = +yearValue.split(',')[1];
+
+    var xScale = d3.scaleLinear()
         .domain([start, end])
-        .range([0, stackInnerWidth]);
-        
-    var stackyScale = d3.scaleLinear()
+        .range([padding.l, svgWidth - padding.r]);
+
+    var yScale = d3.scaleLinear()
         .domain([0, maxSumCount])
-        .range([stackInnerHeight, 0]);
+        .range([(svgHeight - padding.b), padding.t]);
 
-    var inner = stackSVG.select('.inner');
-    var keys = ['black', 'silver', 'white','blue', 'green', 'yellow', 'orange', 'red'];
-    var colorMapping = {
-        'red' :'#ff6733',
-        'orange': '#ffa600',
-        'yellow': '#ffd300',
-        'green': '#00e3c6',
-        'blue': '#00adff',
-        'white': '#ffffff',
-        'silver': '#a3a3a3',
-        'black': '#000000'
-    }
-
-    var stack = d3.stack()
-        .keys(keys)
-        .order(d3.stackOrderNone)
-        .offset(d3.stackOffsetNone);
+    var xAxis = d3.axisBottom()
+        .scale(xScale);
     
-    var series = stack(colorData);
+    var yAxis = d3.axisLeft()
+        .scale(yScale)
+    
+    var keys = [ 'white','red', 'yellow','black',  'silver','blue', 'green', 'orange'];
+    var stack = d3.stack();
+
     var area = d3.area()
-        .x(d => stackxScale(d.data.date))
-        .y0(d => stackyScale(d[0]))
-        .y1(d => stackyScale(d[1]));
+        .x((d) => xScale(d.data.date))
+        .y0((d) => yScale(d[0]))
+        .y1((d) => yScale(d[1]));
 
-    // real stack starts
-    var stackArea = inner.selectAll('.event')
-        .data(series, d => d);
+    stack.keys(keys);
+    stack.order(d3.stackOrderNone);
+    stack.offset(d3.stackOffsetNone);
 
-    stackArea.enter()
-        .append('g')
-        .attr('class', d => 'event ' + d.key)
-        .merge(stackArea)
-        .append('path')
-        .attr('d', area)
-        .style('fill', d => colorMapping[d.key])
-        .style('fill-opacity', 0.7)
-        .style('stroke', d => colorMapping[d.key])
-        .style('stroke-width', 2)
+    var stackArea = stack_svg.selectAll('.event')
+        .data(stack(colorData), d => d.color + ' area');
 
     stackArea.exit().remove();
     
-    var xTick = inner.select('.stackSVG-x-axis')
+    stackArea.enter()
+        .append('g')
+        .attr('class', 'event')
+        .merge(stackArea)
+        .append('path')
+        .attr('d', area)
+        .style('fill', (d) => d.key);
+
+    stack_svg.select('.stack-x-axis')
         .transition()
-        .call(d3.axisBottom().scale(stackxScale));
-    var yTick = inner.select('.stackSVG-y-axis')
+        .call(xAxis);
+    
+    stack_svg.select('.stack-y-axis')
         .transition()
-        .call(d3.axisLeft().scale(stackyScale));
+        .call(yAxis);
 }
 
 var processHeatData = function(data) {
@@ -522,6 +373,7 @@ var processHeatData = function(data) {
         return newData;
     }, {});
     //console.log(heatData);
+
     var result = [];
     for (var key in heatData) {
         var month = key.split(',')[0];
@@ -630,42 +482,15 @@ var drawDuration = function(data) {
     var barWidth = 1;
     var barHeight = 30;
     var barpadding = 1;
+
     var keys = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
     var heightMap = {};
     for (var i = 0; i < keys.length; i++) {
         heightMap[keys[i]] = i * (barHeight + barpadding);
     }
-    var colorCount = {};
-    keys.forEach(d => colorCount[d] = {'totalCount': 0});
-    data.forEach(d => {
-        if (d.color in colorCount) {
-            if (d.duration in colorCount[d.color]) {
-                colorCount[d.color][d.duration]++;
-            } else {
-                colorCount[d.color][d.duration] = 1;
-            }
-            colorCount[d.color]['totalCount']++;
-        }
-    });
 
-    barData = [];
-    for (var color in colorCount) {
-        for (var duration in colorCount[color]) {
-            if (duration == 'totalCount') {
-                continue;
-            }
-            barData.push({
-                'duration': +duration,
-                'color': color,
-                'colorScale': +colorCount[color][duration] * 100.0 / colorCount[color]['totalCount']
-            });
-        }
-    }
-    //console.log(barData);
-
-    //console.log(colorCount);
     var xScale = d3.scaleLinear()
-        .domain(d3.extent(barData, d => d.duration))
+        .domain(d3.extent(data, d => d.duration))
         .range([padding.l, svgWidth - padding.r]);
 
     var yScale = d3.scaleLinear()
@@ -679,7 +504,7 @@ var drawDuration = function(data) {
         .scale(yScale)
     
     var durationBar = duration_svg.selectAll('.color-bar')
-        .data(barData, d => d.duration + '-' + d.color);
+        .data(data, d => d.duration + '-' + d.color);
 
     durationBar
         .enter()
@@ -691,9 +516,7 @@ var drawDuration = function(data) {
         .attr('width', barWidth)
         .attr('height', barHeight)
         .style('fill', d => d.color)
-        .style('fill-opacity', d => d.colorScale)
-        .on('mouseover', tip.show)
-        .on('mouseout', tip.hide);
+        .style('fill-opacity', 0.05);
     
     durationBar.exit().remove();
     
@@ -704,6 +527,7 @@ var drawDuration = function(data) {
     duration_svg.select('.duration-y-axis')
         .transition()
         .call(yAxis);
+        
 }
 
 var processSankeyData = function(data) {
@@ -895,9 +719,4 @@ var yearFilter = function(d, start, end) {
 var stateFilter = function(d, state) {
     return state == 'recover' ? true: d.state == state;
     
-}
-
-var stackYearFilter = function(start, end) {
-    stackUpdated = events.filter(d => (yearFilter(d, start, end)));
-    drawStack(processStackData(stackUpdated));
 }
