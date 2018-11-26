@@ -21,7 +21,7 @@
                 style="width: 800px;"/>
             <label for="yearSlider"  style="margin-left:6px;">2014</label>
         </div>
-        <svg id='heat' width="1000", height="600", style="border: 1px solid #777;"></svg>
+        <svg id='heat' width="1000", height="600"></svg>
         <select id='colorSeletor' onChange="updateColor()">
             <option value='all'>all</option>
             <option value='red'>red</option>
@@ -37,7 +37,7 @@
         <svg id='duration' width="1000" height="600" style="border: 1px solid #777;background-color:white"></svg>
         <svg id='sankey' width="1000" height="600" style="border: 1px solid #777;background-color:#d7e2f4"></svg>
     </div>
-    <div id="viz" width="1440px" style="background-color:#0d1d38"> 
+    <div id="viz" width="1440px"> 
             <div class='row'>
                 <div class='col-sm-2'></div>
                 <div class='col-sm-10'>
@@ -49,9 +49,8 @@
                 <p align='center'>STATES & COLORS & AMOUNTS</p>
                 <p align='center'>Drag tbe timeline and select a state to observe trends over years</p>
             </div>
-            <svg id="stackSVG" width="1440" height="650">
-            </svg>
-            <svg id="heatSVG" width="1440" heihgt="849"></svg>
+            <svg id="stackSVG" width="1440" height="650"></svg>
+            <svg id="heatSVG" width="1440" height="849"></svg>
             <svg id="sankeySVG" width="1440" height="850"></svg>
             <svg id="mapSVG" width="1440" height="850"></svg>
     </div>
