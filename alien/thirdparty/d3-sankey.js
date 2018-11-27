@@ -276,7 +276,7 @@ var sankey = function() {
 
         // Push any overlapping nodes down.
 
-        nodes.sort((a, b) => (b.value - a.value));
+        nodes.sort((a, b) => (a.value - b.value));
         //nodes.sort(ascendingBreadth);
         for (i = 0; i < n; ++i) {
           node = nodes[i];
@@ -330,9 +330,15 @@ function horizontalTarget(d) {
 }
 
 var sankeyLinkHorizontal = function() {
+  /*
   return d3Shape.linkHorizontal()
       .source(horizontalSource)
       .target(horizontalTarget);
+  */
+ return d3Shape.linkHorizontal()
+  .source(horizontalSource)
+  .target(horizontalTarget);
+
 };
 
 exports.sankey = sankey;

@@ -14,10 +14,23 @@ var heatSVG = d3.select('#heatSVG');
 var heatSVGWidth = +heatSVG.attr('width');
 var heatSVGHeight = +heatSVG.attr('height');
 
+var sankeySVG = d3.select('#sankeySVG');
+var sankeySVGWidth = +sankeySVG.attr('width');
+var sankeySVGHeigth = +sankeySVG.attr('height');
+
+var sankeypadding = {t: 150, l: 110, r: 680, b:100};
+var durationBarpadding = {t:150, l: sankeySVGWidth - sankeypadding.r + 10, r: 151, b:100};
+var sankeyInnerWidth = sankeySVGWidth - sankeypadding.l - sankeypadding.r;
+var sanekyInnerHeight = sankeySVGHeigth - sankeypadding.t - sankeypadding.b;
+var durationInnerWidth = sankeySVGWidth - durationBarpadding.l - durationBarpadding.r;
+var durationInnerHeight = sankeySVGHeigth - durationBarpadding.t - durationBarpadding.b;
+
+console.log('duration inner w: ' + durationInnerWidth);
+console.log('duration inner h: ' + durationInnerHeight);
+
 var heatpadding = {t: 300, l: 151, r:151, b:151};
 var heatFilterpadding = {t: 120, l: 151, r: 151, b:650}
 var heatFilterInnerHeight = heatSVGHeight - heatFilterpadding.t - heatFilterpadding.b;
-
 var heatFilterInnerWidth = heatSVGWidth - heatFilterpadding.l - heatFilterpadding.r;
 
 var heatInnerHeight = heatSVGHeight - heatpadding.t - heatpadding.b;
@@ -476,6 +489,7 @@ var initHeat = function() {
         .merge(stackArea)
         .append('path')
         .attr('d', area)
+        .attr('class', 'stack-path')
         .style('fill', d => colorMapping[d.key])
         .style('fill-opacity', 0.7)
         .style('stroke', d => colorMapping[d.key])
@@ -485,20 +499,27 @@ var initHeat = function() {
     // brush
 
     var brushStart = function() {
-        console.log('start');
+        
     }
-
     var brushMove = function() {
-        console.log('moving');
         var s = d3.event.selection;
         if (s) {
             heatYearFilter(filterxScale.invert(s[0]), filterxScale.invert(s[1]));
+            //updateFilterStackColor(filterxScale.invert(s[0]), filterxScale.invert(s[1]));
         }
     }
 
     var brushEnd = function() {
+    }
 
-        console.log('brushend');
+    var updateFilterStackColor = function(start, end) {
+        var temp = innerFilter.selectAll('.stack-path')
+        temp.style('fill', d => d.data.date <= end && d.data.date >= start ?
+            colorMapping[d.key] : '')
+            .style('fill-opacity', 0.7)
+            .style('stroke', d  => d.data.date <= end && d.data.date >= start ?
+            colorMapping[d.key] : '')
+            .style('stroke-width', 2)
     }
 
     var brush = d3.brushX()
@@ -521,7 +542,7 @@ var initHeat = function() {
         .attr('transform', 'translate(' + heatpadding.l + ',' + heatpadding.t + ')');
 
     var heatxScale = d3.scaleLinear()
-        .domain([1, 31])
+        .domain([1, 31])    
         .range([heatMapWidth, heatInnerWidth - heatMapWidth]);
     
     var heatyScale = d3.scaleLinear()
@@ -746,26 +767,6 @@ var drawHeat = function(heatData) {
     enter.each(function(cell) {
         cell.update2(this);
     });
-
-    
-
-    // old code below
-    /*
-    var heatCell = heat_svg.selectAll('.cell')
-            .data(cells, d => d.month + '-' + d.day)
-
-    var heatCellEnter = heatCell.enter()
-        .append('g')
-        .attr('class', 'cell')
-        .merge(heatCell);
-        
-    heatCellEnter.each(function(cell){
-        cell.update(this, cell);
-    });
-
-    heatCell.exit().remove();
-    */
-
 }
 
 var drawDuration = function(data) {
@@ -888,17 +889,20 @@ var processSankeyData = function(data) {
     var nodeCollection = {};
     var nodes = [];
     var links = [];
+    var getWidth = function(name) {
+        return name in colorMapping ? 60 : 5;
+    }
     for (var key in temp) {
         var source = key.split(',')[0];
         var target = key.split(',')[1];
         var value = temp[key];
         if (!(source in nodeCollection)) {
             nodeCollection[source] = true;
-            nodes.push({'name': source, 'value': 0});
+            nodes.push({'name': source, 'value': 0, 'width': getWidth(source)});
         }
         if (!(target in nodeCollection)) {
             nodeCollection[target] = true;
-            nodes.push({'name': target, 'value': 0});
+            nodes.push({'name': target, 'value': 0, 'width': getWidth(target)});
         }
         links.push({
             'source': source,
@@ -916,7 +920,11 @@ var processSankeyData = function(data) {
         links[i].source = nodePosition[links[i].source];
         links[i].target = nodePosition[links[i].target];
     });
-    return sankey.nodes(nodes).links(links)();
+    var sankeyTemp = d3.sankey()
+        .nodeWidth(30)
+        .nodePadding(5)
+        .extent([[0, 0], [sankeyInnerWidth, sanekyInnerHeight]]);
+    return sankeyTemp.nodes(nodes).links(links)();
 }
 
 var initSankey = function() {
@@ -928,40 +936,139 @@ var initSankey = function() {
         .attr('fill', 'none')
         .attr('stroke-opacity', 0.5)
         .attr('class', 'link-group')
+    
+        
+    var sanekyInner = sankeySVG.append('g')
+        .attr('class', 'sankey-inner')
+        .attr('transform', 'translate(' + (sankeypadding.l + sankeyInnerWidth)
+            + ',' + (sankeypadding.t + sanekyInnerHeight) + ') rotate(180)');
+    /*
+    var sanekyInner = sankeySVG.append('g')
+        .attr('class', 'sankey-inner')
+        .attr('transform', 'translate(' + sankeypadding.l  + ',' + sankeypadding.t  + ')');
+        */
+    sanekyInner.append('g')
+        .attr('stroke', '#000')
+        .attr('class', 'node-group');
+
+    sanekyInner.append('g')
+        .attr('fill', 'none')
+        .attr('stroke-opacity', 0.5)
+        .attr('class', 'link-group')
+
+    var durationInner = sankeySVG.append('g')
+        .attr('class', 'duration-inner')
+        .attr('transform', 'translate(' + durationBarpadding.l 
+            + ',' + durationBarpadding.t + ') ');
+    
+    var xAxis = durationInner.append('g')
+        .attr('class', 'duration-x-axis ticks')
+        .attr('transform', 'translate(0,' + durationInnerHeight + ')');
+        
+    durationInner.append('g')
+        .attr('class', 'duration-y-axis ticks')
+        .attr('transform', 'translate(0, 0)');
+
 }
 var drawSankey = function(graph) {
     //console.log(graph);
     var nodes = sankey_svg.select('.node-group')
         .selectAll('.node')
         .data(graph.nodes)
+    // data
+    var durations = events;
 
-    nodes.enter()
+    var keys = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
+    var colorCount = {};
+    keys.forEach(d => colorCount[d] = {'totalCount': 0});
+    durations.forEach(d => {
+        if (d.color in colorCount) {
+            if (d.duration in colorCount[d.color]) {
+                colorCount[d.color][d.duration]++;
+            } else {
+                colorCount[d.color][d.duration] = 1;
+            }
+            colorCount[d.color]['totalCount']++;
+        }
+    });
+
+    barData = [];
+    for (var color in colorCount) {
+        for (var duration in colorCount[color]) {
+            if (duration == 'totalCount') {
+                continue;
+            }
+            barData.push({
+                'duration': +duration / 60,
+                'color': color,
+                'colorScale': +colorCount[color][duration] * 20.0 / colorCount[color]['totalCount']
+            });
+        }
+    }
+    var barHeights = getNodePosition(graph.nodes);
+    console.log(barHeights);
+
+    var xScale = d3.scaleLinear()
+        .domain(d3.extent(barData, d => d.duration))
+        .range([0, durationInnerWidth]);
+    
+    var xAxis = sankeySVG.select('.duration-inner')
+        .select('.duration-x-axis');
+
+    var durationInner = sankeySVG.select('.duration-inner');
+
+    console.log(barData)
+    durationInner.append('g')
+        .attr('class', 'bar-group')
+        .selectAll('.color-bar')
+        .data(barData)
+        .enter()
+        .append('rect')
+        .attr('class', 'color-bar')
+        .attr('x', d => xScale(d.duration))
+        .attr('y', d => barHeights[d.color].y)
+        .attr('width', 2)
+        .attr('height', d => barHeights[d.color].height)
+        .style('fill', d => colorMapping[d.color])
+        .style('fill-opacity', d => d.colorScale);
+
+    xAxis.call(d3.axisBottom().scale(xScale));
+
+    var sanekyInner = sankeySVG.select('.sankey-inner');
+
+    var nodesTemp = sanekyInner.select('.node-group')
+        .selectAll('.node')
+        .data(graph.nodes);
+
+    nodesTemp.enter()
         .append('rect')
         .attr('class', 'node')
-        .merge(nodes)
+        .merge(nodesTemp)
         .attr('x', d => d.x0)
         .attr('y', d => d.y0)
         .attr('height', d => d.y1 - d.y0)
-        .attr('width', 30)
-        .append('title')
-        .text(d => d.name);
+        .attr('width', d => d.width ? d.width : d.x1 - d.x0)
+        .style('fill', d => d.name in colorMapping ? colorMapping[d.name] : '')
+        .style('stroke',  d => d.name in colorMapping ? colorMapping[d.name] : '')
+        
 
-    nodes.exit().remove();
+    nodesTemp.exit().remove();
     
-    var links = sankey_svg.select('.link-group')
-            .selectAll('.link')
-            .data(graph.links)
-            
-    links.enter()
+    graph.links.sort((a, b) => a.color.localeCompare(b.color));
+    var linksTemp = sanekyInner.select('.link-group')
+        .selectAll('.link')
+        .data(graph.links);
+
+    linksTemp.enter()
         .append('path')
         .attr('class', 'link')
-        .merge(links)
+        .merge(linksTemp)
         .attr('d', d3.sankeyLinkHorizontal())
-        .style('stroke', d => d.color)
+        .style('stroke', d => colorMapping[d.color])
         .style('stroke-width', d => Math.max(1, d.width))
         .style('stroke-opacity', 0.8);
 
-    links.exit().remove();
+    linksTemp.exit().remove();
 }
 
 var updateColor = function() {
@@ -1049,3 +1156,16 @@ var heatYearFilter = function(start, end) {
     drawHeat(processHeatData(heatUpdated))
 }
 
+var getNodePosition = function(nodes) {
+    var h = sanekyInnerHeight + sankeypadding.t;
+    var heights = {};
+    nodes.forEach(d => {
+        if (d.name in colorMapping) {
+            heights[d.name] = {
+                'height': d.y1 - d.y0,
+                'y': durationInnerHeight - (d.y1 - d.y0) - d.y0
+            }
+        }
+    })
+    return heights;
+}
