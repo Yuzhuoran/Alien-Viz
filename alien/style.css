@@ -46,3 +46,19 @@ p {
 .ticks line {
     stroke: #2d445c
 }
+
+#maptoolTip {
+    max-width: 24%;
+    padding-top: 119px;
+    padding-left: 10px;
+    padding-right: 80px;
+
+}
+
+p.content {
+    padding-left: 70px;
+}
+
+#event {
+    padding-top: 150px;
+}
