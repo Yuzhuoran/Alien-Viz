@@ -19,22 +19,23 @@
             <svg id="sankeySVG" width="1440" height="850"></svg>
             <div id='maoGroup' width="1440" height="850">
                 <div class='row'>
-                    <svg id="mapSVG" width="1100" height="850"></svg>
-                    <div id='maptoolTip' width='340'>
+                    <svg id="mapSVG" width="1000" height="850"></svg>
+
+                    <div id='maptoolTip' width='440'>
                         <div id='property'>
-                            <p> divide line</p>
-                            <p>PROPERTY</p>
-                            <p style='display:inline'> COLOR:</p>
-                            <p style='display:inline' id='ufoColor'> UFO color</p>
-                            <p>SHAPE:</P>
-                            <p>DURATION: </p>
+                            <div class='horizontal-line'></div>
+                            <p class='intro-title'> PROPERTY</p>
+                            <p class='info'><span class='attr-name'>COLOR: </span><span class='attr' id='ufoColor'></span></p>
+                            <p class='info'><span class='attr-name'>SHAPE: </span><span class='attr' id='ufoShape'></span></P>
+                            <p class='info'><span class='attr-name'>DURATION: </span><span class='attr' id='ufoDuration'></span></p>
                         </div>
                         <div id='event'> 
-                            <p> divide line</p>
-                            <p>TIME</p>
-                            <p>LOCATION:</p>
-                            <p>DETAIL:</P>
-                    </div>
+                            <div class='horizontal-line'></div>
+                            <p class='intro-title'>EVENT</p>
+                            <p class='info'><span class='attr-name'>TIME: </span><span class='attr' id='ufoTime'></span></p>
+                            <p class='info'><span class='attr-name'>LOCATION: </span><span class='attr' id='ufoLocation'></span></p>
+                            <p class='info'><span class='attr-name'>DETAIL: </span><span class='attr' id='ufoDetail'></span></P>
+                        </div>
                 </div>
             </div>
             

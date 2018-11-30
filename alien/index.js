@@ -116,6 +116,26 @@ var stateMapping =
     'Wyoming': 'WY'
 }
 
+var shapeTransform = {
+    'changing':'changing',
+    'chevron': 'chevron',
+    'cigar': 'cigar',
+    'circle': 'circle',
+    'cylinder': 'cylinder',
+    'diamond': 'diamond',
+    "disk": 'disk',
+    "fireball": "fireball",
+    "formation": 'formation',
+    "light": 'light',
+    "oval": 'oval',
+    "rectangle": 'rectangle',
+    "teardrop": 'teardrop',
+    "triangle": 'triangle',
+    "other": 'other',
+    "sphere": 'circle',
+    'flash':'light'
+}
+
 
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 var days = d3.range(1, 32);
@@ -137,6 +157,7 @@ var mapUpdated;
 var clickState;
 var selectedState = 'recover';
 var stackSelectedState = 'all';
+var selectedNode;
 
 var validate = function(data) {
     if (data.country != 'us') {
@@ -338,8 +359,13 @@ var drawMap = function(points) {
         .style('fill', d => colorMapping[d.color])
         .style('fill-opacity', 0.6)
         .on('mouseover', d => {
-            console.log('click!');
+            console.log(d);
             d3.select('#ufoColor').text(d.color);
+            d3.select('#ufoShape').text(d.shape in shapeTransform ? shapeTransform[d.shape] : 'unknown');
+            d3.select('#ufoDuration').text(parseFloat(d.duration / 60).toFixed(2) + ' minutes');
+            d3.select('#ufoTime').text(d.date.toLocaleString());
+            d3.select('#ufoLocation').text(d.city);
+            d3.select('#ufoDetail').text(d.comments);
         })
 
     mapPoint.exit().remove();
@@ -620,7 +646,7 @@ var initHeat = function() {
         .range([heatMapWidth, heatInnerWidth - heatMapWidth]);
     
     var heatyScale = d3.scaleLinear()
-        .domain([1, 12])
+        .domain(months)
         .range([0, heatInnerHeight]);
     
     inner.append('g')
@@ -631,7 +657,10 @@ var initHeat = function() {
     inner.append('g')
         .attr('class', 'stackSVG-y-axis ticks')
         .attr('transform', 'translate(0,' + heatMapHeight + ')')
-        .call(d3.axisLeft().scale(heatyScale));
+        .call(d3.axisLeft().scale(heatyScale).tickFormat(function(d) {
+            console.log(d);
+            return d;
+        }));
 
 }
 
@@ -834,25 +863,7 @@ var drawHeat = function(heatData) {
 
 var processSankeyData = function(data) {
 
-    var shapeTransform = {
-        'changing':'changing',
-        'chevron': 'chevron',
-        'cigar': 'cigar',
-        'circle': 'circle',
-        'cylinder': 'cylinder',
-        'diamond': 'diamond',
-        "disk": 'disk',
-        "fireball": "fireball",
-        "formation": 'formation',
-        "light": 'light',
-        "oval": 'oval',
-        "rectangle": 'rectangle',
-        "teardrop": 'teardrop',
-        "triangle": 'triangle',
-        "other": 'other',
-        "sphere": 'circle',
-        'flash':'light'
-    }
+
     //var colors = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
     // source, target, count
     var temp = {};
@@ -904,7 +915,6 @@ var processSankeyData = function(data) {
         links[i].target = nodePosition[links[i].target];
     });
     var sankeyTemp = d3.sankey()
-        .nodeWidth(30)
         .nodePadding(5)
         .extent([[0, 0], [sankeyInnerWidth, sanekyInnerHeight]]);
     return sankeyTemp.nodes(nodes).links(links)();
@@ -1004,23 +1014,6 @@ var drawSankey = function(graph) {
 
     var sanekyInner = sankeySVG.select('.sankey-inner');
 
-    var nodesTemp = sanekyInner.select('.node-group')
-        .selectAll('.node')
-        .data(graph.nodes);
-
-    nodesTemp.enter()
-        .append('rect')
-        .attr('class', 'node')
-        .merge(nodesTemp)
-        .attr('x', d => d.x0)
-        .attr('y', d => d.y0)
-        .attr('height', d => d.y1 - d.y0)
-        .attr('width', d => d.width ? d.width : d.x1 - d.x0)
-        .style('fill', d => d.name in colorMapping ? colorMapping[d.name] : '') 
-        .style('stroke',  d => d.name in colorMapping ? colorMapping[d.name] : '')
-        
-
-    nodesTemp.exit().remove();
     graph.links.sort((a, b) => a.color.localeCompare(b.color));
     var linksTemp = sanekyInner.select('.link-group')
         .selectAll('.link')
@@ -1036,6 +1029,55 @@ var drawSankey = function(graph) {
         .style('stroke-opacity', 0.8);
 
     linksTemp.exit().remove();
+
+    var nodesTemp = sanekyInner.select('.node-group')
+        .selectAll('.node')
+        .data(graph.nodes);
+
+    nodesTemp.enter()
+        .append('rect')
+        .attr('class', 'node')
+        .merge(nodesTemp)
+        .attr('x', d => d.x0)
+        .attr('y', d => d.y0)
+        .attr('height', d => d.y1 - d.y0)
+        .attr('width', d => d.width ? d.width : d.x1 - d.x0)
+        .style('fill', d => d.name in colorMapping ? colorMapping[d.name] : '') 
+        .style('stroke',  d => d.name in colorMapping ? colorMapping[d.name] : '')
+        .on('click', function(d) {
+            if (!(d.name in colorMapping)) {
+                return;
+            }
+            updateColor(d.name, d == selectedNode);
+            selectedNode = (d == selectedNode ? 'undefined' : d);
+        })
+        
+
+    nodesTemp.exit().remove();
+
+
+
+    function updateColor(color, isRecover) {
+        durationInner.select('.bar-group').selectAll('.color-bar')
+            .style('fill', d => isRecover || d.color == color ? colorMapping[d.color] : 'gray');
+        sanekyInner.select('.node-group').selectAll('.node')
+            .style('fill', d => {
+                if (d.name in colorMapping) {
+                    return isRecover || d.name == color ? colorMapping[d.name] : 'gray';
+                }
+                return '';
+            });
+        sanekyInner.select('.node-group').selectAll('.node')
+            .style('stroke', d => {
+                if (d.name in colorMapping) {
+                    return isRecover || d.name == color ? colorMapping[d.name] : 'gray';
+                }
+                return '';
+            });
+        sanekyInner.select('.link-group').selectAll('.link')
+            .style('stroke', d => isRecover || d.color == color ? colorMapping[d.color] : 'gray');
+
+    }
 }
 
 

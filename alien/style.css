@@ -36,29 +36,56 @@ p {
 }
 
 .ticks path{
-    stroke: #2d445c
+    opacity: 0.5;
+    stroke: white
 }
 
 .ticks text {
-    fill: #2d445c
+    opacity: 0.5;
+    fill: white
 }
 
 .ticks line {
-    stroke: #2d445c
+    opacity: 0.5;
+    stroke: white
 }
 
 #maptoolTip {
-    max-width: 24%;
-    padding-top: 119px;
-    padding-left: 10px;
-    padding-right: 80px;
+    max-width: 330px;
+    width:330px;
+    padding-top: 120px;
+    padding-left: 30px;
+    margin-left: 30px;
+    padding-right: 20px;
+    background-color: #041025;
 
 }
 
-p.content {
-    padding-left: 70px;
+span.attr-name {
+    opacity: 0.5
+    
+}
+
+p.info {
+    position: relative;
+}
+
+p.intro-title {
+    font-size: 24px;
+}
+
+span.attr {
+    
 }
 
 #event {
     padding-top: 150px;
+}
+
+div.horizontal-line {
+    width: 80px;
+    height: 5px;
+    background-color: white;
+    margin-bottom: 30px;
+
 }
