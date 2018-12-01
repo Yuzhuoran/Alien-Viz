@@ -87,5 +87,13 @@ div.horizontal-line {
     height: 5px;
     background-color: white;
     margin-bottom: 30px;
+}
 
+#container {
+    position: relative;
+}
+
+#filterBar {
+    position:sticky;
+    top: 0px;
 }

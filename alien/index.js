@@ -15,9 +15,24 @@ var sankeySVGHeigth = +sankeySVG.attr('height');
 var mapSVG = d3.select('#mapSVG');
 var mapSVGWidth = +mapSVG.attr('width');
 var mapSVGHeight = +mapSVG.attr('height');
-var mappadding = {t: 180, l: 131, r: 0, b: 80}
+var mappadding = {t: 120, l: 131, r: 0, b: 180}
+
 var mapInnerWidth = mapSVGWidth - mappadding.l - mappadding.r;
 var mapInnerHeight = mapSVGHeight - mappadding.t - mappadding.b;
+
+var filterSVG = d3.select('#filterSVG');
+var filterSVGWidth = +filterSVG.attr('width');
+var filterSVGHeight = +filterSVG.attr('height');
+
+var filterYearpadding = {l: 151, t: 30, r: 500, b:30};
+var filterColorpadding = {l: filterSVGWidth - filterYearpadding.r + 80, t:30, r: 80, b: 30};
+
+var filterYearInnerWidth = filterSVGWidth - filterYearpadding.l - filterYearpadding.r;
+var filterYearInnerHeight = filterSVGHeight - filterYearpadding.t - filterYearpadding.b;
+
+var filterColorInnerWidth = filterSVGWidth - filterColorpadding.l - filterColorpadding.r;
+var filterColorInnerHeight = filterSVGHeight - filterColorpadding.t - filterColorpadding.b;
+
 
 var sankeypadding = {t: 150, l: 110, r: 630, b:100};
 var durationBarpadding = {t:150, l: sankeySVGWidth - sankeypadding.r + 10, r: 151, b:100};
@@ -26,15 +41,17 @@ var sanekyInnerHeight = sankeySVGHeigth - sankeypadding.t - sankeypadding.b;
 var durationInnerWidth = sankeySVGWidth - durationBarpadding.l - durationBarpadding.r;
 var durationInnerHeight = sankeySVGHeigth - durationBarpadding.t - durationBarpadding.b;
 
-var heatpadding = {t: 300, l: 151, r:151, b:151};
+var heatpadding = {t: 150, l: 151, r: 151, b: 251};
 var heatFilterpadding = {t: 120, l: 151, r: 151, b:650}
 var heatFilterInnerHeight = heatSVGHeight - heatFilterpadding.t - heatFilterpadding.b;
 var heatFilterInnerWidth = heatSVGWidth - heatFilterpadding.l - heatFilterpadding.r;
 
 var heatInnerHeight = heatSVGHeight - heatpadding.t - heatpadding.b;
 var heatInnerWidth = heatSVGWidth - heatpadding.l - heatpadding.r;
-var heatMapHeight = heatInnerHeight / 12 * 0.52;
-var heatMapWidth = heatInnerWidth / 32 * 0.48;
+
+var heatMapHeight = heatInnerHeight / 12 * 0.45;
+var heatMapWidth = heatInnerWidth / 31 * 0.6;
+
 
 var mapxPadding = heatInnerWidth / 12 * 0.1;
 var mapyPadding = heatInnerHeight / 31 * 0.1;
@@ -44,9 +61,12 @@ var cellHeight = (heatMapHeight)/ 2.0;
 
 var mapCellpadding = 1;
 
-var stackpadding = {t: 300, l:151, r:151, b:191}
+var stackpadding = {t: 300, l:151, r:151, b:151}
 var stackInnerHeight = stackSVGheighth - stackpadding.t - stackpadding.b;
 var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
+
+// scroll sections below
+
 
 
 var HeatCell = function(colors) {
@@ -152,12 +172,14 @@ var colorMapping = {
 }
 
 var stackUpdated;
-var heatUpdated;
-var mapUpdated;
+var heatAndMapUpdated;
+
+var sankeyUpdated;
 var clickState;
 var selectedState = 'recover';
 var stackSelectedState = 'all';
 var selectedNode;
+var selectedColor = 'all';
 
 var validate = function(data) {
     if (data.country != 'us') {
@@ -205,16 +227,215 @@ function readyToDraw(error, dataset, states) {
     }
     events = dataset;  
     stackUpdated = events;
-    heatUpdated = events;
+    heatAndMapUpdated = events;
+    sankeyUpdated = events;
+
     initStack();
     stackYearFilter(1940, 2014);
+    initFilterBar();
     initHeat();
-    drawHeat(processHeatData(heatUpdated));
+    drawHeat(processHeatData(heatAndMapUpdated));
     initMap(states);
-    drawMap(events);
+    drawMap(heatAndMapUpdated);
     initSankey();
-    drawSankey(processSankeyData(events));
+    drawSankey(processSankeyData(sankeyUpdated));
     console.log(events.length);
+}
+
+var initFilterBar = function() {
+    var stackData = processStackData(events.filter(d => d.year >= 1940 && d.year <= 2014));
+    var maxSumCount = d3.max(stackData, (d) => {
+        var vals = d3.keys(d).map((key) => {
+            return key !== 'date' ? d[key] : 0;
+        });
+        return d3.sum(vals);
+    });
+
+    var filterxScale = d3.scaleLinear() 
+        .domain([1940, 2014])
+        .range([0, filterYearInnerWidth]);
+
+    var filteryScale = d3.scaleLinear()
+        .domain([0, maxSumCount])
+        .range([filterYearInnerHeight, 0]);
+
+    var innerFilterYear = filterSVG.append('g')
+        .attr('class', 'inner filter-year')
+        .attr('transform', 'translate(' + filterYearpadding.l + ',' + filterYearpadding.t + ')');
+    
+    innerFilterYear.append('g')
+        .attr('class', 'filter-year-x ticks')
+        .attr('transform', 'translate(0,' + filterYearInnerHeight + ')')
+        .call(d3.axisBottom().scale(filterxScale));
+
+    innerFilterYear.append('g')
+        .attr('class', 'filter-year-y ticks')
+        .attr('transform', 'translate(0,0)')
+        .call(d3.axisLeft().scale(filteryScale));
+
+    var keys = ['black', 'silver', 'white','blue', 'green', 'yellow', 'orange', 'red'];
+
+    var stack = d3.stack()
+        .keys(keys)
+        .order(d3.stackOrderNone)
+        .offset(d3.stackOffsetNone);
+    
+    var series = stack(stackData);
+    var area = d3.area()
+        .x(d => filterxScale(d.data.date))
+        .y0(d => filteryScale(d[0]))
+        .y1(d => filteryScale(d[1]));
+
+    var stackArea = innerFilterYear.selectAll('.event')
+        .data(series, d => d);
+
+    stackArea.enter()
+        .append('g')
+        .attr('class', d => 'event ' + d.key)
+        .merge(stackArea)
+        .append('path')
+        .attr('d', area)
+        .attr('class', 'stack-path')
+        .style('fill', d => colorMapping[d.key])
+        .style('fill-opacity', 0.7)
+        .style('stroke', d => colorMapping[d.key])
+        .style('stroke-width', 2)
+
+    stackArea.exit().remove();
+
+
+    // init color bar
+    var filterColor = filterSVG.append('g')
+        .attr('class', 'inner filter-color')
+        .attr('transform', 'translate(' + filterColorpadding.l + ',' + filterColorpadding.t + ')');
+
+    var colorxScale = d3.scaleLinear()
+        .domain([1, 8])
+        .range([0, filterColorInnerWidth]);
+    
+    keys.reverse();
+    var colorBtns = [];
+    keys.forEach((d, i) => {
+        colorBtns.push({
+            'x': i + 1,
+            'y': 0.3 * filterColorInnerHeight,
+            'color': d,
+        })
+    });
+    console.log(colorBtns);
+    var btnWidth = 37;
+    var btnHeight= 44;
+
+    filterColor.selectAll('.color-btn').data(colorBtns)
+        .enter()
+        .append('rect')
+        .attr('class', d => 'color-btn ' + d.color + '-btn')
+        .attr('x', d => colorxScale(d.x))
+        .attr('y', d => d.y)
+        .attr('width', btnWidth)
+        .attr('height', btnHeight)
+        .style('fill', d => colorMapping[d.color])
+        .on('mouseover', function() {
+            d3.select(this).style('cursor', 'pointer');
+        })
+        .on('click', function(d) {
+            if (selectedColor == 'all') {
+                selectedColor = d.color;
+                d3.select(this).style('stroke', d => d.color == 'white' ? 'black': 'white');
+                d3.select(this).style('stroke-width', 3);
+            } else if (selectedColor == d.color) {
+                filterColor.select('.' + selectedColor + '-btn').style('stroke', '');
+                filterColor.select('.' + selectedColor + '-btn').style('stroke-width', 0);
+                selectedColor = 'all';
+            } else {
+                filterColor.select('.' + selectedColor + '-btn').style('stroke', '');
+                filterColor.select('.' + selectedColor + '-btn').style('stroke-width', 0);
+                selectedColor = d.color;
+                d3.select(this).style('stroke', 'white');
+                d3.select(this).style('stroke-width', 3);
+            }
+            updateSankeyColor(selectedColor);
+            updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
+        });
+    
+    // add drag interval;
+    var rangeStart = 0;
+    var rangeEnd = filterYearInnerWidth;
+
+    var end = {
+        'x': rangeEnd,
+        'y': -5,
+        'r': 6,
+        'type': 'r'
+    };
+
+    var start = {
+        'x': rangeStart,
+        'y': -5,
+        'r': 6,
+        'type': 'l'
+    };
+
+    var drag = d3.drag();
+    drag.on('drag', dragging)
+        .on('start', dragstarted)
+        .on('end', dragended);
+
+    var handles = innerFilterYear.selectAll('.handle').data([start, end]);
+
+    var handlesEnter = handles.enter()
+        .append('g')
+        .attr('class', d => 'handle ' + d.type)
+        .attr('id', d => 'handle' + d.type)
+        .attr('value', d => Math.round(filterxScale.invert(d.x)))
+        .call(drag);
+
+    handles.merge(handlesEnter);
+
+    handlesEnter
+        .append('circle')
+        .attr('r', d => d.r)
+        .attr('cx', d => d.x)
+        .attr('cy', d => d.y)
+        .attr('stroke', 'white')
+        .attr('stroke-width', 2)
+        .attr('fill', '#868e9b')
+        .on('mouseover', function() {
+            d3.select(this).style('cursor', 'pointer');
+        })
+
+    handlesEnter
+        .append('rect')
+        .attr('x', d => d.x - 1)
+        .attr('y', d => d.y + d.r)
+        .attr('width', 2)
+        .attr('height', d => filterYearInnerHeight - (d.y + d.r + 1))
+        .style('fill', 'white');
+
+    
+    handles.exit().remove();
+
+    function dragging(d) {
+        var pos = d3.event.x;
+        var boundary = +d3.select('#handle' + (d.type == 'l' ? 'r' : 'l')).select('circle').attr('cx');
+            
+        console.log(boundary);
+        if (d.type == 'r') {
+            pos = Math.min(rangeEnd, Math.max(pos, boundary));
+        } else {
+            pos = Math.min(boundary, Math.max(pos, rangeStart));
+        }
+        d3.select(this).select('circle').attr('cx', d => d.x = pos);
+        d3.select(this).select('rect').attr('x', d => d.x = pos - 1);
+        d3.select(this).attr('value', Math.round(filterxScale.invert(pos)));
+        var startYear = Math.round(filterxScale.invert(d.type == 'l' ? pos : boundary));
+        var endYear = Math.round(filterxScale.invert(d.type == 'l' ? boundary : pos));
+
+        // update
+
+        updateSankey(startYear, endYear);
+        updateHeatAndMap(startYear, endYear);
+    }
 }
 
 var initMap = function(states) {
@@ -237,6 +458,7 @@ var initMap = function(states) {
         .style('stroke', 'white')
         .style('stroke-width', 0.5)
     
+        /*
     var filter = mapSVG.append('g')
         .attr('class', 'filter')
         .attr('transform', 'translate(' + mappadding.l + ',' + (mapSVGHeight - mappadding.b) + ')');
@@ -339,6 +561,7 @@ var initMap = function(states) {
         .call(rightDrag);
     
     handleRight.exit().remove();
+    */
     
 }
 var drawMap = function(points) {
@@ -355,11 +578,10 @@ var drawMap = function(points) {
         .merge(mapPoint)
         .attr('cx', d => projection([d.lng, d.lat])[0])
         .attr('cy', d => projection([d.lng, d.lat])[1])
-        .attr('r', 2)
+        .attr('r', 3.5)
         .style('fill', d => colorMapping[d.color])
         .style('fill-opacity', 0.6)
         .on('mouseover', d => {
-            console.log(d);
             d3.select('#ufoColor').text(d.color);
             d3.select('#ufoShape').text(d.shape in shapeTransform ? shapeTransform[d.shape] : 'unknown');
             d3.select('#ufoDuration').text(parseFloat(d.duration / 60).toFixed(2) + ' minutes');
@@ -446,8 +668,6 @@ var initStack = function() {
         //console.log('interval is ' + x.invert(pos) + ', ' + x.invert(rightBoundary));
     }
       
-
-
     function rightDragged(d) {
         var pos = d3.event.x;
         var leftBoundary = +d3.select('#filter1start').attr('cx');
@@ -553,7 +773,7 @@ var initHeat = function() {
     var filteryScale = d3.scaleLinear()
         .domain([0, maxSumCount])
         .range([heatFilterInnerHeight, 0]);
-    
+    /*
     var innerFilter = heatSVG.append('g')
         .attr('class', 'inner-filter')
         .attr('transform', 'translate(' + heatFilterpadding.l + ',' + heatFilterpadding.t + ')');
@@ -633,7 +853,7 @@ var initHeat = function() {
         .call(brush);
     
     brush.move(brushG, [1940, 2014].map(filterxScale));
-    
+    */
     
     // real heat map
 
@@ -646,7 +866,7 @@ var initHeat = function() {
         .range([heatMapWidth, heatInnerWidth - heatMapWidth]);
     
     var heatyScale = d3.scaleLinear()
-        .domain(months)
+        .domain([1, 12])
         .range([0, heatInnerHeight]);
     
     inner.append('g')
@@ -658,8 +878,7 @@ var initHeat = function() {
         .attr('class', 'stackSVG-y-axis ticks')
         .attr('transform', 'translate(0,' + heatMapHeight + ')')
         .call(d3.axisLeft().scale(heatyScale).tickFormat(function(d) {
-            console.log(d);
-            return d;
+            return months[d - 1];
         }));
 
 }
@@ -778,10 +997,9 @@ var drawHeat = function(heatData) {
         var y = heatyScale(+_this.colors.month) + heatMapHeight / 2;
         var x = heatxScale(+_this.colors.day) + heatMapWidth / 2;
         
-        
         var xScale = d3.scaleLinear()
             .domain([1, 4])
-            .range([0, heatMapWidth ]);
+            .range([0, heatMapWidth]);
 
         var yScale = d3.scaleLinear()
             .domain([1, 2.5])
@@ -826,7 +1044,7 @@ var drawHeat = function(heatData) {
 
         rects.merge(rectsEnter)
             .style('fill', d => colorMapping[d.color])
-            .style('fill-opacity', d =>  opacityScale(d.value))
+            .style('fill-opacity', d =>  1* opacityScale(d.value))
             .style('stroke', d => d.color == 'black' ? 'white' : '') 
             .style('stroke-opacity', d => d.color == 'black' ? opacityScale(d.value) : '');
         
@@ -884,7 +1102,7 @@ var processSankeyData = function(data) {
     var nodes = [];
     var links = [];
     var getWidth = function(name) {
-        return name in colorMapping ? 60 : 5;
+        return name in colorMapping ? 70 : 5;
     }
     for (var key in temp) {
         var source = key.split(',')[0];
@@ -957,7 +1175,13 @@ var drawSankey = function(graph) {
     //console.log(graph);
     // data
     var durations = events;
-    var keys = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
+    //var keys = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
+    var keys = [];
+    graph.nodes.forEach(d => {
+        if (d.name in colorMapping) {
+            keys.push(d.name);
+        }
+    })
     var colorCount = {};
     keys.forEach(d => colorCount[d] = {'totalCount': 0});
     durations.forEach(d => {
@@ -985,7 +1209,6 @@ var drawSankey = function(graph) {
         }
     }
     var barHeights = getNodePosition(graph.nodes);
-    console.log(barHeights);
 
     var xScale = d3.scaleLinear()
         .domain(d3.extent(barData, d => d.duration))
@@ -996,13 +1219,13 @@ var drawSankey = function(graph) {
 
     var durationInner = sankeySVG.select('.duration-inner');
     
-    durationInner.append('g')
-        .attr('class', 'bar-group')
-        .selectAll('.color-bar')
-        .data(barData)
-        .enter()
+    var durationBar = durationInner.selectAll('.color-bar')
+        .data(barData);
+
+    durationBar.enter()
         .append('rect')
         .attr('class', 'color-bar')
+        .merge(durationBar)
         .attr('x', d => xScale(d.duration))
         .attr('y', d => barHeights[d.color].y)
         .attr('width', 2)
@@ -1010,11 +1233,14 @@ var drawSankey = function(graph) {
         .style('fill', d => colorMapping[d.color])
         .style('fill-opacity', d => d.colorScale);
 
+    durationBar.exit().remove();
+
     xAxis.call(d3.axisBottom().scale(xScale));
 
     var sanekyInner = sankeySVG.select('.sankey-inner');
 
     graph.links.sort((a, b) => a.color.localeCompare(b.color));
+
     var linksTemp = sanekyInner.select('.link-group')
         .selectAll('.link')
         .data(graph.links);
@@ -1044,40 +1270,9 @@ var drawSankey = function(graph) {
         .attr('width', d => d.width ? d.width : d.x1 - d.x0)
         .style('fill', d => d.name in colorMapping ? colorMapping[d.name] : '') 
         .style('stroke',  d => d.name in colorMapping ? colorMapping[d.name] : '')
-        .on('click', function(d) {
-            if (!(d.name in colorMapping)) {
-                return;
-            }
-            updateColor(d.name, d == selectedNode);
-            selectedNode = (d == selectedNode ? 'undefined' : d);
-        })
-        
 
     nodesTemp.exit().remove();
 
-
-
-    function updateColor(color, isRecover) {
-        durationInner.select('.bar-group').selectAll('.color-bar')
-            .style('fill', d => isRecover || d.color == color ? colorMapping[d.color] : 'gray');
-        sanekyInner.select('.node-group').selectAll('.node')
-            .style('fill', d => {
-                if (d.name in colorMapping) {
-                    return isRecover || d.name == color ? colorMapping[d.name] : 'gray';
-                }
-                return '';
-            });
-        sanekyInner.select('.node-group').selectAll('.node')
-            .style('stroke', d => {
-                if (d.name in colorMapping) {
-                    return isRecover || d.name == color ? colorMapping[d.name] : 'gray';
-                }
-                return '';
-            });
-        sanekyInner.select('.link-group').selectAll('.link')
-            .style('stroke', d => isRecover || d.color == color ? colorMapping[d.color] : 'gray');
-
-    }
 }
 
 
@@ -1085,14 +1280,19 @@ var yearFilter = function(d, start, end) {
     return d.year >= start && d.year <= end;
 }
 
+var colorFilter = function(d) {
+    return selectedColor == 'all' || d.color == selectedColor;
+}
+
 var stackYearFilter = function(start, end) {
     stackUpdated = events.filter(d => (yearFilter(d, start, end)));
     drawStack(processStackData(stackUpdated));
 }
 
-var heatYearFilter = function(start, end) {
-    heatUpdated = events.filter(d => (yearFilter(d, start, end)));
-    drawHeat(processHeatData(heatUpdated))
+var updateHeatAndMap = function(start, end) {
+    heatAndMapUpdated = events.filter(d => (yearFilter(d, start, end)) && colorFilter(d));
+    drawHeat(processHeatData(heatAndMapUpdated));
+    drawMap(heatAndMapUpdated);
 }
 
 var mapYearFilter = function(start, end) {
@@ -1101,7 +1301,6 @@ var mapYearFilter = function(start, end) {
 }
 
 var getNodePosition = function(nodes) {
-    var h = sanekyInnerHeight + sankeypadding.t;
     var heights = {};
     nodes.forEach(d => {
         if (d.name in colorMapping) {
@@ -1122,4 +1321,34 @@ function dragstarted(d) {
 function dragended(d) {
     d3.select(this).classed("active", false);
     d3.select(this).style('cursor', 'default');
+}
+
+var updateSankey = function(start, end) {
+    sankeyUpdated = events.filter(d => (yearFilter(d, start, end)));
+    drawSankey(processSankeyData(sankeyUpdated));
+    updateSankeyColor(selectedColor);
+}
+
+var updateSankeyColor = function(color) {
+    sankeySVG.select('.sankey-inner')
+        .select('.node-group')
+        .selectAll('.node')
+        .style('fill-opacity', d => {
+            if (d.name in colorMapping) {
+                return (color == 'all' || d.name == color) ? 1 : 0.2;
+            }
+            return '';
+        })
+        .style('stroke', d => {
+            return (color == 'all' || d.name == color) ? colorMapping[d.name] : '';
+        })
+
+    sankeySVG.select('.sankey-inner')
+        .select('.link-group')
+        .selectAll('.link')
+        .style('stroke-opacity', d => (color == 'all' || d.color == color) ? 0.8 : 0.1);
+
+    sankeySVG.select('.duration-inner')
+        .selectAll('.color-bar')
+        .style('fill-opacity', d => (color == 'all' || d.color == color) ? d.colorScale : d.colorScale * 0.1);
 }

@@ -15,35 +15,45 @@
                 <p align='center'>Drag tbe timeline and select a state to observe trends over years</p>
             </div>
             <svg id="stackSVG" width="1440" height="650"></svg>
-            <svg id="heatSVG" width="1440" height="849"></svg>
-            <svg id="sankeySVG" width="1440" height="850"></svg>
-            <div id='maoGroup' width="1440" height="850">
-                <div class='row'>
-                    <svg id="mapSVG" width="1000" height="850"></svg>
 
-                    <div id='maptoolTip' width='440'>
-                        <div id='property'>
-                            <div class='horizontal-line'></div>
-                            <p class='intro-title'> PROPERTY</p>
-                            <p class='info'><span class='attr-name'>COLOR: </span><span class='attr' id='ufoColor'></span></p>
-                            <p class='info'><span class='attr-name'>SHAPE: </span><span class='attr' id='ufoShape'></span></P>
-                            <p class='info'><span class='attr-name'>DURATION: </span><span class='attr' id='ufoDuration'></span></p>
-                        </div>
-                        <div id='event'> 
-                            <div class='horizontal-line'></div>
-                            <p class='intro-title'>EVENT</p>
-                            <p class='info'><span class='attr-name'>TIME: </span><span class='attr' id='ufoTime'></span></p>
-                            <p class='info'><span class='attr-name'>LOCATION: </span><span class='attr' id='ufoLocation'></span></p>
-                            <p class='info'><span class='attr-name'>DETAIL: </span><span class='attr' id='ufoDetail'></span></P>
-                        </div>
+            <div id='container' class='container-1'>
+
+                <div id='filterBar' style='background-color:#182d47'>
+                    <svg id='filterSVG' width='1440' height='130'></svg>
+                </div>
+                <svg id="sankeySVG" width="1440" height="850"></svg>
+                <svg id="heatSVG" width="1440" height="849"></svg>
+                <div id='mapGroup' width="1440" height="850">
+                    <div class='row'>
+                        <svg id="mapSVG" width="1000" height="850"></svg>
+                        <div id='maptoolTip' width='440'>
+                            <div id='property'>
+                                <div class='horizontal-line'></div>
+                                <p class='intro-title'> PROPERTY</p>
+                                <p class='info'><span class='attr-name'>COLOR: </span><span class='attr' id='ufoColor'></span></p>
+                                <p class='info'><span class='attr-name'>SHAPE: </span><span class='attr' id='ufoShape'></span></P>
+                                <p class='info'><span class='attr-name'>DURATION: </span><span class='attr' id='ufoDuration'></span></p>
+                            </div>
+                            <div id='event'> 
+                                <div class='horizontal-line'></div>
+                                <p class='intro-title'>EVENT</p>
+                                <p class='info'><span class='attr-name'>TIME: </span><span class='attr' id='ufoTime'></span></p>
+                                <p class='info'><span class='attr-name'>LOCATION: </span><span class='attr' id='ufoLocation'></span></p>
+                                <p class='info'><span class='attr-name'>DETAIL: </span><span class='attr' id='ufoDetail'></span></P>
+                            </div>
+                    </div>
                 </div>
             </div>
+
+            
+
             
     </div>
 </body>
 <!--
     <script src="/thirdparty/graph-scroll.js"></script>
     <script src="/thirdparty/d3v4+jetpack.js"></script>
+    <script src="https://d3js.org/d3.v4.js"></script>
 -->
 <script src="https://d3js.org/d3.v4.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-tip/0.9.1/d3-tip.min.js"></script>
