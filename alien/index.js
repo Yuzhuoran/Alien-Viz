@@ -71,6 +71,7 @@ var HeatCell = function(colors) {
     this.colors = colors;
 }
 
+var imageMapping = {};
 var stateMapping =
 {
     'Alabama': 'AL',
@@ -155,6 +156,7 @@ var shapeTransform = {
 }
 
 
+
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 var days = d3.range(1, 32);
 
@@ -179,7 +181,9 @@ var nodeTitleColorMapping = {
     'silver': 'white',
     'black': 'white'
 }
-
+var endColorGradient = {
+    
+}
 var stackUpdated;
 var heatAndMapUpdated;
 
@@ -234,6 +238,7 @@ function readyToDraw(error, dataset, states) {
     if (error) {
         console.error("can't load dataset");
     }
+    preLoad();
     events = dataset;  
     stackUpdated = events;
     heatAndMapUpdated = events;
@@ -518,16 +523,27 @@ var drawMap = function(points) {
             d3.select('#maptoolTip').classed('hidden', false)
             d3.select('#ufoColor').text(d.color);
             d3.select('#ufoShape').text(d.shape in shapeTransform ? shapeTransform[d.shape] : 'unknown');
-            d3.select('#ufoDuration').text(parseFloat(d.duration / 60).toFixed(2) + ' minutes');
+            d3.select('#ufoDuration').text(getDurationFormat(d.duration));
             d3.select('#ufoTime').text(d.date.toLocaleString());
             d3.select('#ufoLocation').text(d.city);
             d3.select('#ufoDetail').text(d.comments);
+            var url = 'icons/' + shapeTransform[d.shape] + '_' + d.color + '.png';
+            if (url in imageMapping) {
+                d3.select('#ufoIcon').attr('src', url);
+            } 
+            
         })
         .on('mouseout', d => {
-            //d3.select('#maptoolTip').classed('hidden', true);
+            d3.select('#maptoolTip').classed('hidden', true);
         })
 
     mapPoint.exit().remove();
+
+    function getDurationFormat(duration) {
+        var minute = Math.round(duration / 60);
+        var seconds = duration % 60;
+        return minute > 0 ? minute + ' m' : seconds + ' s'
+    }
 }
 
 var processStackData = function(data) {
@@ -1167,7 +1183,52 @@ var initSankey = function() {
         .attr('text-anchor', 'middle')
         .text('SHAPES');
 
+    var keys = [
+        {
+            'start':'black',
+        }, 
+        {
+            'start': 'silver'
+        }, 
+        {
+            'start': 'white'
+        }, 
+        {
+            'start': 'blue',
+        },
+        {
+            'start': 'green'
+        },
+        {
+            'start': 'yellow',
+        }, 
+        {
+            'start': 'orange'
+        }, 
+        {
+            'start': 'red'
+        }]
 
+    var defs = sanekyInner.append('defs')
+
+    var gradients = defs.selectAll('.gradient')
+        .data(keys)
+        .enter()
+        .append('linearGradient')
+        .attr('class', 'gradient')
+        .attr('id', (d, i) => d)
+
+    gradients.append('stop')
+        .attr('class', 'start')
+        .attr('stop-color', d => colorMapping[d.start])
+        .attr('offset', '0%');
+
+    gradients.append('stop')
+        .attr('class', 'end')
+        .attr('stop-color', d => 'red')
+        .attr('offset', '100%');
+        
+        
 }
 var drawSankey = function(graph) {
     //console.log(graph);
@@ -1242,15 +1303,43 @@ var drawSankey = function(graph) {
     var linksTemp = sanekyInner.select('.link-group')
         .selectAll('.link')
         .data(graph.links);
-
+    
     linksTemp.enter()
         .append('path')
         .attr('class', 'link')
         .merge(linksTemp)
         .attr('d', d3.sankeyLinkHorizontal())
+        //.style('stroke', d => `url(#${d.color})`)
         .style('stroke', d => colorMapping[d.color])
         .style('stroke-width', d => Math.max(1, d.width))
         .style('stroke-opacity', 0.8);
+
+    /*
+    linksEnter.style('stroke', (d, i) => {
+        var gradientID = `gradients${i}`;
+        var startColor = d.source.name;
+        var stopColor = 'black';
+        var linearGradient = sanekyInner.append('linearGradient')
+            .attr('id', gradientID)
+
+        linearGradient.selectAll('stop') 
+            .data([                             
+                {offset: '10%', color: colorMapping[startColor]},      
+                {offset: '90%', color: stopColor }    
+              ])                  
+            .enter().append('stop')
+            .attr('offset', d => {
+              console.log('d.offset', d.offset);
+              return d.offset; 
+            })   
+            .attr('stop-color', d => {
+              console.log('d.color', d.color);
+              return d.color;
+            });
+          return `url(#${gradientID})`;
+    })
+    */
+    
 
     linksTemp.exit().remove();
 
@@ -1367,4 +1456,21 @@ var updateSankeyColor = function(color) {
     sankeySVG.select('.duration-inner')
         .selectAll('.color-bar')
         .style('fill-opacity', d => (color == 'all' || d.color == color) ? d.colorScale : d.colorScale * 0.1);
+}
+
+var preLoad = function() {
+    var shapes = ['chevron', 'change', 'cigar', 'circle', 'diamond', 'disk', 'fireball', 'light'
+        , 'Oval', 'Rectangle', 'teardrop', 'Triangle'];
+    var colors = ['black', 'gray', 'white','blue', 'green', 'yellow', 'orange', 'red'];
+    var urls = [];
+    shapes.forEach(d1 => {
+        colors.forEach(d2 => {
+           urls.push('icons/' + d1 + '_' + d2 + '.png'); 
+        })
+    })
+    //console.log(urls);
+    urls.forEach(d => {
+        imageMapping[d] = new Image();
+        imageMapping[d].src = d;
+    });
 }
