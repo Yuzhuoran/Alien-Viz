@@ -67,7 +67,7 @@ span.attr-name {
 }
 
 p.info {
-    position: relative;
+    opacity: 0.5
 }
 
 p.intro-title {
@@ -75,7 +75,7 @@ p.intro-title {
 }
 
 span.attr {
-    
+    text-align: left
 }
 
 #event {
@@ -96,4 +96,28 @@ div.horizontal-line {
 #filterBar {
     position:sticky;
     top: 0px;
+}
+
+.axis-title {
+    fill: white;
+    font-size: 18px
+}
+
+.node-title {
+    font-size: 14px;
+    fill: white
+}
+
+.title{
+    font-size: 32px;
+    fill: white
+}
+
+.description {
+    fill: white;
+    font-size: 18px;
+}
+
+.hidden {
+    visibility: hidden
 }

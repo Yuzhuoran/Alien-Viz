@@ -24,7 +24,7 @@ var filterSVG = d3.select('#filterSVG');
 var filterSVGWidth = +filterSVG.attr('width');
 var filterSVGHeight = +filterSVG.attr('height');
 
-var filterYearpadding = {l: 151, t: 30, r: 500, b:30};
+var filterYearpadding = {l: 151, t: 50, r: 500, b:30};
 var filterColorpadding = {l: filterSVGWidth - filterYearpadding.r + 80, t:30, r: 80, b: 30};
 
 var filterYearInnerWidth = filterSVGWidth - filterYearpadding.l - filterYearpadding.r;
@@ -41,7 +41,7 @@ var sanekyInnerHeight = sankeySVGHeigth - sankeypadding.t - sankeypadding.b;
 var durationInnerWidth = sankeySVGWidth - durationBarpadding.l - durationBarpadding.r;
 var durationInnerHeight = sankeySVGHeigth - durationBarpadding.t - durationBarpadding.b;
 
-var heatpadding = {t: 150, l: 151, r: 151, b: 251};
+var heatpadding = {t: 180, l: 151, r: 151, b: 251};
 var heatFilterpadding = {t: 120, l: 151, r: 151, b:650}
 var heatFilterInnerHeight = heatSVGHeight - heatFilterpadding.t - heatFilterpadding.b;
 var heatFilterInnerWidth = heatSVGWidth - heatFilterpadding.l - heatFilterpadding.r;
@@ -66,8 +66,6 @@ var stackInnerHeight = stackSVGheighth - stackpadding.t - stackpadding.b;
 var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
 
 // scroll sections below
-
-
 
 var HeatCell = function(colors) {
     this.colors = colors;
@@ -171,6 +169,17 @@ var colorMapping = {
     'black': '#000000'
 }
 
+var nodeTitleColorMapping = {
+    'white': '#0d1d38',
+    'red': 'white',
+    'orange': 'white',
+    'yellow': '#0d1d38',
+    'green': '#0d1d38',
+    'blue': '#0d1d38',
+    'silver': 'white',
+    'black': 'white'
+}
+
 var stackUpdated;
 var heatAndMapUpdated;
 
@@ -268,10 +277,12 @@ var initFilterBar = function() {
         .attr('transform', 'translate(0,' + filterYearInnerHeight + ')')
         .call(d3.axisBottom().scale(filterxScale));
 
+        /*
     innerFilterYear.append('g')
         .attr('class', 'filter-year-y ticks')
         .attr('transform', 'translate(0,0)')
         .call(d3.axisLeft().scale(filteryScale));
+        */
 
     var keys = ['black', 'silver', 'white','blue', 'green', 'yellow', 'orange', 'red'];
 
@@ -302,7 +313,6 @@ var initFilterBar = function() {
         .style('stroke-width', 2)
 
     stackArea.exit().remove();
-
 
     // init color bar
     var filterColor = filterSVG.append('g')
@@ -412,7 +422,15 @@ var initFilterBar = function() {
         .attr('height', d => filterYearInnerHeight - (d.y + d.r + 1))
         .style('fill', 'white');
 
-    
+    handlesEnter
+        .append('text')
+        .attr('x', d => d.x)
+        .attr('y', d => d.y - d.r - 3)
+        .attr('text-anchor', 'middle')
+        .text(d => Math.round(filterxScale.invert(d.x)))
+        .style('font-size', '15px')
+        .style('fill', 'white');
+
     handles.exit().remove();
 
     function dragging(d) {
@@ -427,12 +445,14 @@ var initFilterBar = function() {
         }
         d3.select(this).select('circle').attr('cx', d => d.x = pos);
         d3.select(this).select('rect').attr('x', d => d.x = pos - 1);
+        d3.select(this).select('text')
+            .attr('x', d => d.x = pos)
+            .text(d => Math.round(filterxScale.invert(d.x)));
         d3.select(this).attr('value', Math.round(filterxScale.invert(pos)));
         var startYear = Math.round(filterxScale.invert(d.type == 'l' ? pos : boundary));
         var endYear = Math.round(filterxScale.invert(d.type == 'l' ? boundary : pos));
 
         // update
-
         updateSankey(startYear, endYear);
         updateHeatAndMap(startYear, endYear);
     }
@@ -458,110 +478,23 @@ var initMap = function(states) {
         .style('stroke', 'white')
         .style('stroke-width', 0.5)
     
-        /*
-    var filter = mapSVG.append('g')
-        .attr('class', 'filter')
-        .attr('transform', 'translate(' + mappadding.l + ',' + (mapSVGHeight - mappadding.b) + ')');
-
-    var rangeStart = 0;
-    var rangeEnd = mapInnerWidth - 100;
-    console.log(rangeStart + ', ' + rangeEnd)
-    var xScale = d3.scaleLinear()
-        .domain([1940, 2014])
-        .range([rangeStart, rangeEnd]);
-
-    filter.append('g')
-        .attr('class', 'year-filter ticks')
-        .attr('transform', 'translate(0, 4)')
-        .call(d3.axisTop().scale(xScale));
-
-    var end = [{
-        'x': rangeEnd,
-        'y': 5,
-        'r': 6
-    }];
-
-    var start = [{
-        'x': rangeStart,
-        'y': 5,
-        'r': 6
-    }];
+    var mapTitles = mapSVG.append('g')
+        .attr('class', 'title-group')
+        .attr('transform', 'translate(' + (mapSVGWidth / 1.6) + ', 40)')
     
-    function leftDragged(d) {
-        //d3.select(this).attr("cx", d3.event.x).attr("cy", d3.event.y);
-        var pos = d3.event.x;
-        var rightBoundary = +d3.select('#mapFilterEnd').attr('cx');
-        pos = Math.min(rightBoundary, Math.max(pos, rangeStart));
-        d3.select(this).attr('cx', d => d.x = pos)
-        mapYearFilter(Math.round(xScale.invert(pos)), Math.round(xScale.invert(rightBoundary)));
-        console.log('interval is ' + xScale.invert(pos) + ', ' + xScale.invert(rightBoundary));
-    }
-          
 
-    function rightDragged(d) {
-        var pos = d3.event.x;
-        var leftBoundary = +d3.select('#mapFilterStart').attr('cx');
-        pos = Math.min(rangeEnd, Math.max(pos, leftBoundary));
-        d3.select(this).attr('cx', d => d.x = pos)
-        mapYearFilter(Math.round(xScale.invert(leftBoundary)), Math.round(xScale.invert(pos)));
-        console.log('interval is ' + xScale.invert(leftBoundary), xScale.invert(pos));
-    }
-    
-    var leftDrag = d3.drag();
-    var rightDrag = d3.drag();
+    mapTitles.append('g')
+        .attr('class', 'title')
+        .append('text')
+        .attr('text-anchor', 'middle')
+        .text('COLORS & LOCATIONS');
 
-    rightDrag.on('drag', rightDragged)
-        .on('start', dragstarted)
-        .on('end', dragended);
-    
-    leftDrag.on('start', dragstarted)
-        .on('end', dragended)
-        .on('drag', leftDragged);
-
-    var handleLeft = filter.selectAll('.handleStart')
-        .data(start)
-
-    handleLeft.enter()
-        .append('circle')
-        .attr('class', 'hanldStart')
-        .merge(handleLeft)
-        .attr('r', d => d.r)
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y)
-        .attr('id', 'mapFilterStart')
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2)
-        .attr('fill', '#868e9b')
-        .on('mouseover', function() {
-            d3.select(this)
-                .style('cursor', 'pointer')
-        })
-        .call(leftDrag);
-
-    handleLeft.exit().remove();
-
-    var handleRight = filter.selectAll('.handleEnd')
-        .data(end)
-
-    handleRight.enter()
-        .append('circle')
-        .attr('class', 'hanldEnd')
-        .merge(handleRight)
-        .attr('r', d => d.r)
-        .attr('cx', d => d.x)
-        .attr('cy', d => d.y)
-        .attr('id', 'mapFilterEnd')
-        .attr('stroke', 'white')
-        .attr('stroke-width', 2)
-        .attr('fill', '#868e9b')
-        .on('mouseover', function() {
-            d3.select(this)
-                .style('cursor', 'pointer')
-        })
-        .call(rightDrag);
-    
-    handleRight.exit().remove();
-    */
+    mapTitles.append('g')
+        .attr('class', 'description')
+        .append('text')
+        .attr('y', 40)
+        .attr('text-anchor', 'middle')
+        .text('Drag the timeline to filter the time')
     
 }
 var drawMap = function(points) {
@@ -582,12 +515,16 @@ var drawMap = function(points) {
         .style('fill', d => colorMapping[d.color])
         .style('fill-opacity', 0.6)
         .on('mouseover', d => {
+            d3.select('#maptoolTip').classed('hidden', false)
             d3.select('#ufoColor').text(d.color);
             d3.select('#ufoShape').text(d.shape in shapeTransform ? shapeTransform[d.shape] : 'unknown');
             d3.select('#ufoDuration').text(parseFloat(d.duration / 60).toFixed(2) + ' minutes');
             d3.select('#ufoTime').text(d.date.toLocaleString());
             d3.select('#ufoLocation').text(d.city);
             d3.select('#ufoDetail').text(d.comments);
+        })
+        .on('mouseout', d => {
+            //d3.select('#maptoolTip').classed('hidden', true);
         })
 
     mapPoint.exit().remove();
@@ -640,6 +577,12 @@ var initStack = function() {
     inner.append('g')
         .attr('class', 'stackSVG-y-axis ticks')
         .attr('transform', 'translate(0, 0)');
+    
+    stackSVG.append('g')
+        .attr('class', 'axis-title')
+        .attr('transform', 'translate(' + (stackpadding.l - 40) + ',' + (stackpadding.t - 20) +')')
+        .append('text')
+        .text('TIMES');
 
     var yearAxisStart = 300;
     var x = d3.scaleLinear()
@@ -659,7 +602,6 @@ var initStack = function() {
     }];
 
     function leftDragged(d) {
-        //d3.select(this).attr("cx", d3.event.x).attr("cy", d3.event.y);
         var pos = d3.event.x;
         var rightBoundary = +d3.select('#filter1end').attr('cx');
         pos = Math.min(rightBoundary, Math.max(pos, yearAxisStart));
@@ -695,15 +637,6 @@ var initStack = function() {
     slider.append('text')
         .attr('transform', 'translate(' + 200 + ',10)')
         .text('YEAR')
-        .attr('fill', 'white');
-
-    var dropdown = stackSVG.append('g')
-        .attr('class', 'dropdown')
-        .attr('transform', 'translate(' + stackpadding.l + ',' + 160 + ')');
-    
-    dropdown.append('text')
-        .attr('transform', 'translate(0, 10)')
-        .text('STATE')
         .attr('fill', 'white');
 
     var track = slider.append('line')
@@ -872,7 +805,7 @@ var initHeat = function() {
     inner.append('g')
         .attr('class', 'heatSVG-x-axis ticks')
         .attr('transform', 'translate(0,' + (heatInnerHeight + 2 * heatMapHeight) + ')')
-        .call(d3.axisBottom().scale(heatxScale));
+        .call(d3.axisBottom().scale(heatxScale).tickValues(d3.range(1, 32)));
     
     inner.append('g')
         .attr('class', 'stackSVG-y-axis ticks')
@@ -880,7 +813,37 @@ var initHeat = function() {
         .call(d3.axisLeft().scale(heatyScale).tickFormat(function(d) {
             return months[d - 1];
         }));
+    
+    inner.append('g')
+        .attr('class', 'axis-title')
+        .attr('transform', 'translate(-60, -15)')
+        .append('text')
+        .text('MONTH');
 
+    inner.append('g')
+        .attr('class', 'axis-title')
+        .attr('transform', 'translate(' + heatInnerWidth + ',' + (heatInnerHeight + heatMapHeight * 2) + ')')
+        .append('text')
+        .text('DAYS');
+
+    var heatTitles = heatSVG.append('g')
+        .attr('class', 'title-group')
+        .attr('transform', 'translate(' + (heatSVGWidth / 2) + ', 40)')
+    
+
+    heatTitles.append('g')
+        .attr('class', 'title')
+        .append('text')
+        .attr('text-anchor', 'middle')
+        .text('COLORS & DAYS');
+
+    heatTitles.append('g')
+        .attr('class', 'description')
+        .append('text')
+        .attr('y', 40)
+        .attr('text-anchor', 'middle')
+        .text('Drag the timeline to filter the time')
+    
 }
 
 var drawStack = function(colorData) {
@@ -1102,7 +1065,7 @@ var processSankeyData = function(data) {
     var nodes = [];
     var links = [];
     var getWidth = function(name) {
-        return name in colorMapping ? 70 : 5;
+        return name in colorMapping ? 100 : 5;
     }
     for (var key in temp) {
         var source = key.split(',')[0];
@@ -1143,11 +1106,25 @@ var initSankey = function() {
         .attr('class', 'sankey-inner')
         .attr('transform', 'translate(' + (sankeypadding.l + sankeyInnerWidth)
             + ',' + (sankeypadding.t + sanekyInnerHeight) + ') rotate(180)');
-    /*
-    var sanekyInner = sankeySVG.append('g')
-        .attr('class', 'sankey-inner')
-        .attr('transform', 'translate(' + sankeypadding.l  + ',' + sankeypadding.t  + ')');
-        */
+
+    var sankeyTitles = sankeySVG.append('g')
+        .attr('class', 'title-group')
+        .attr('transform', 'translate(' + sankeySVGWidth / 2 + ', 50)')
+    
+    sankeyTitles.append('g')
+        .attr('class', 'title')
+        .append('text')
+        .attr('text-anchor', 'middle')
+        .text('SHAPE - COLORS - DURATION');
+
+    sankeyTitles.append('g')
+        .attr('class', 'description')
+        .append('text')
+        .attr('y', 40)
+        .attr('text-anchor', 'middle')
+        .text('Select a color to observe patterns')
+        
+
     sanekyInner.append('g')
         .attr('stroke', '#000')
         .attr('class', 'node-group');
@@ -1169,6 +1146,27 @@ var initSankey = function() {
     durationInner.append('g')
         .attr('class', 'duration-y-axis ticks')
         .attr('transform', 'translate(0, 0)');
+
+    durationInner.append('g')
+        .attr('class', 'axis-title')
+        .attr('transform', 'translate(' + (durationInnerWidth + 20) + ',' + (durationInnerHeight + 25) + ')')
+        .append('text')
+        .text('MINS');
+
+    sanekyInner.append('g')
+        .attr('class', 'axis-title')
+        .attr('transform', 'translate(50, -25) rotate(180)')
+        .append('text')
+        .attr('text-anchor', 'middle')
+        .text('COLORS');
+
+    sanekyInner.append('g')
+        .attr('class', 'axis-title')
+        .attr('transform', 'translate(' + (sankeyInnerWidth + 10) + ',' + -20 + ') rotate(180)')
+        .append('text')
+        .attr('text-anchor', 'middle')
+        .text('SHAPES');
+
 
 }
 var drawSankey = function(graph) {
@@ -1258,9 +1256,12 @@ var drawSankey = function(graph) {
 
     var nodesTemp = sanekyInner.select('.node-group')
         .selectAll('.node')
-        .data(graph.nodes);
+        .data(graph.nodes)
 
-    nodesTemp.enter()
+    var nodesEnter = nodesTemp.enter();
+    nodesEnter.merge(nodesTemp);
+
+    nodesEnter
         .append('rect')
         .attr('class', 'node')
         .merge(nodesTemp)
@@ -1271,6 +1272,21 @@ var drawSankey = function(graph) {
         .style('fill', d => d.name in colorMapping ? colorMapping[d.name] : '') 
         .style('stroke',  d => d.name in colorMapping ? colorMapping[d.name] : '')
 
+    var texts = sanekyInner.selectAll('.node-title')
+        .data(graph.nodes)
+    
+    texts.enter()
+        .append('text')
+        .attr('class', 'node-title')
+        .merge(texts)
+        .attr('transform', d => 'translate(' + (d.x0 + d.width) + ',' + (d.y1 + d.y0) / 2 +') rotate(180)')
+        .attr('x', d => d.name in colorMapping ? 50 :0)
+        .attr('y', d => d.name in colorMapping ? 5: 0)
+        .attr('text-anchor', d => d.name in colorMapping ? 'middle' : 'end')
+        .style('fill', d => d.name in nodeTitleColorMapping ? nodeTitleColorMapping[d.name] : 'white')
+        .text(d => d.name in colorMapping ? d.name.toUpperCase() : d.name);
+
+    texts.exit().remove();
     nodesTemp.exit().remove();
 
 }
