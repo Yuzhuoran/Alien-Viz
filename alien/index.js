@@ -71,7 +71,6 @@ var HeatCell = function(colors) {
     this.colors = colors;
 }
 
-var imageMapping = {};
 var stateMapping =
 {
     'Alabama': 'AL',
@@ -136,7 +135,7 @@ var stateMapping =
 }
 
 var shapeTransform = {
-    'changing':'changing',
+    'changing':'change',
     'chevron': 'chevron',
     'cigar': 'cigar',
     'circle': 'circle',
@@ -208,6 +207,21 @@ var validate = function(data) {
     }
     return true;
 }
+var images = {};
+function preLoad() {
+    var shapes = ['change','chevron', 'cigar', 'circle', 'diamond', 'disk', 'fireball', 'light'
+        , 'oval', 'rectangle', 'teardrop', 'triangle'];
+    var colors = ['black', 'blue', 'gray', 'white','green', 'yellow', 'orange', 'red'];
+    for (var i = 0; i < shapes.length; i++) {
+        for (var j = 0; j < colors.length; j++) {
+            var url = `images/${shapes[i]}_${colors[j]}.png`;
+            //var url = 'icons/' + shapes[i] + '_' + colors[j] + '.png';
+            images[url] = new Image();
+            images[url].src = url;
+        }
+    }
+}
+
 d3.queue()
     .defer(d3.csv, '/data/filter_color.csv', (row) => {
         var date = new Date(row['datetime']);
@@ -238,7 +252,7 @@ function readyToDraw(error, dataset, states) {
     if (error) {
         console.error("can't load dataset");
     }
-    preLoad();
+    
     events = dataset;  
     stackUpdated = events;
     heatAndMapUpdated = events;
@@ -251,6 +265,7 @@ function readyToDraw(error, dataset, states) {
     drawHeat(processHeatData(heatAndMapUpdated));
     initMap(states);
     drawMap(heatAndMapUpdated);
+    preLoad();
     initSankey();
     drawSankey(processSankeyData(sankeyUpdated));
     console.log(events.length);
@@ -337,7 +352,6 @@ var initFilterBar = function() {
             'color': d,
         })
     });
-    console.log(colorBtns);
     var btnWidth = 37;
     var btnHeight= 44;
 
@@ -527,10 +541,11 @@ var drawMap = function(points) {
             d3.select('#ufoTime').text(d.date.toLocaleString());
             d3.select('#ufoLocation').text(d.city);
             d3.select('#ufoDetail').text(d.comments);
-            var url = 'icons/' + shapeTransform[d.shape] + '_' + d.color + '.png';
-            if (url in imageMapping) {
+            var url = 'images/' + shapeTransform[d.shape] + '_' 
+                + (d.color == 'silver' ? 'gray' : d.color)+ '.png';
+            if (url in images) {
                 d3.select('#ufoIcon').attr('src', url);
-            } 
+            }
             
         })
         .on('mouseout', d => {
@@ -1314,33 +1329,6 @@ var drawSankey = function(graph) {
         .style('stroke-width', d => Math.max(1, d.width))
         .style('stroke-opacity', 0.8);
 
-    /*
-    linksEnter.style('stroke', (d, i) => {
-        var gradientID = `gradients${i}`;
-        var startColor = d.source.name;
-        var stopColor = 'black';
-        var linearGradient = sanekyInner.append('linearGradient')
-            .attr('id', gradientID)
-
-        linearGradient.selectAll('stop') 
-            .data([                             
-                {offset: '10%', color: colorMapping[startColor]},      
-                {offset: '90%', color: stopColor }    
-              ])                  
-            .enter().append('stop')
-            .attr('offset', d => {
-              console.log('d.offset', d.offset);
-              return d.offset; 
-            })   
-            .attr('stop-color', d => {
-              console.log('d.color', d.color);
-              return d.color;
-            });
-          return `url(#${gradientID})`;
-    })
-    */
-    
-
     linksTemp.exit().remove();
 
     var nodesTemp = sanekyInner.select('.node-group')
@@ -1458,19 +1446,4 @@ var updateSankeyColor = function(color) {
         .style('fill-opacity', d => (color == 'all' || d.color == color) ? d.colorScale : d.colorScale * 0.1);
 }
 
-var preLoad = function() {
-    var shapes = ['chevron', 'change', 'cigar', 'circle', 'diamond', 'disk', 'fireball', 'light'
-        , 'Oval', 'Rectangle', 'teardrop', 'Triangle'];
-    var colors = ['black', 'gray', 'white','blue', 'green', 'yellow', 'orange', 'red'];
-    var urls = [];
-    shapes.forEach(d1 => {
-        colors.forEach(d2 => {
-           urls.push('icons/' + d1 + '_' + d2 + '.png'); 
-        })
-    })
-    //console.log(urls);
-    urls.forEach(d => {
-        imageMapping[d] = new Image();
-        imageMapping[d].src = d;
-    });
-}
+
