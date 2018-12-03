@@ -69,6 +69,13 @@ var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
 
 var HeatCell = function(colors) {
     this.colors = colors;
+    this.getKey = function() {
+        var key = '';
+        for (var k in colors) {
+            key += k + '-' + colors[k];
+        }
+        return key;
+    }
 }
 
 var stateMapping =
@@ -154,8 +161,6 @@ var shapeTransform = {
     'flash':'light'
 }
 
-
-
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 var days = d3.range(1, 32);
 
@@ -169,7 +174,6 @@ var colorMapping = {
     'silver': '#a3a3a3',
     'black': '#000000'
 }
-
 var nodeTitleColorMapping = {
     'white': '#0d1d38',
     'red': 'white',
@@ -185,12 +189,7 @@ var endColorGradient = {
 }
 var stackUpdated;
 var heatAndMapUpdated;
-
 var sankeyUpdated;
-var clickState;
-var selectedState = 'recover';
-var stackSelectedState = 'all';
-var selectedNode;
 var selectedColor = 'all';
 
 var validate = function(data) {
@@ -455,8 +454,6 @@ var initFilterBar = function() {
     function dragging(d) {
         var pos = d3.event.x;
         var boundary = +d3.select('#handle' + (d.type == 'l' ? 'r' : 'l')).select('circle').attr('cx');
-            
-        console.log(boundary);
         if (d.type == 'r') {
             pos = Math.min(rangeEnd, Math.max(pos, boundary));
         } else {
@@ -1030,17 +1027,17 @@ var drawHeat = function(heatData) {
             .attr('transform', 'translate(' + x + ',' + y +')');
 
         var rects = smallCells.selectAll('.color-cell')
-            .data(items, d => x + '-' + y);
+            .data(items, d => d);
 
         var rectsEnter = rects.enter()
             .append('rect')
             .attr('class', 'color-cell')
+
+        rectsEnter.merge(rects)
             .attr('x', d => xScale(d.x))
             .attr('y', d => yScale(d.y))
             .attr('width', cellWidth)
             .attr('height', cellHeight)
-
-        rects.merge(rectsEnter)
             .style('fill', d => colorMapping[d.color])
             .style('fill-opacity', d =>  1* opacityScale(d.value))
             .style('stroke', d => d.color == 'black' ? 'white' : '') 
@@ -1059,22 +1056,36 @@ var drawHeat = function(heatData) {
         return d3.max(vals);
     });
     var opacityScale = d3.scaleLinear().domain([0, heatMaxColor]);
+
     var cells = [];
     heatData.forEach(d => cells.push(new HeatCell(d)));
-    var bigCell = heatSVG.select('.heat-inner')
+
+    var heatInner = heatSVG.select('.heat-inner');
+
+    var bigCell = heatInner
         .selectAll('.big-cell')
-        .data(cells, d => d.day + '-' + d.month)
+        .data(cells, d => d.getKey())
     
-    var enter = bigCell.enter()
+    var bigCellEnter = bigCell.enter()
         .append('g')
         .attr('class', 'big-cell')
+    
+    bigCellEnter.merge(bigCell);
 
-    enter.merge(bigCell);
+    bigCellEnter.each(function(cell) {
+            cell.update2(this);
+    });
+
     bigCell.exit().remove();
 
+
+    /*
     enter.each(function(cell) {
         cell.update2(this);
     });
+    */
+        //enter.merge(bigCell);
+    
 }
 
 var processSankeyData = function(data) {
@@ -1097,7 +1108,7 @@ var processSankeyData = function(data) {
     var nodes = [];
     var links = [];
     var getWidth = function(name) {
-        return name in colorMapping ? 100 : 5;
+        return name in colorMapping ? 80 : 5;
     }
     for (var key in temp) {
         var source = key.split(',')[0];
@@ -1186,7 +1197,7 @@ var initSankey = function() {
 
     sanekyInner.append('g')
         .attr('class', 'axis-title')
-        .attr('transform', 'translate(50, -25) rotate(180)')
+        .attr('transform', 'translate(40, -25) rotate(180)')
         .append('text')
         .attr('text-anchor', 'middle')
         .text('COLORS');
@@ -1363,7 +1374,7 @@ var drawSankey = function(graph) {
         .attr('class', 'node-title')
         .merge(texts)
         .attr('transform', d => 'translate(' + (d.x0 + d.width) + ',' + (d.y1 + d.y0) / 2 +') rotate(180)')
-        .attr('x', d => d.name in colorMapping ? 50 :0)
+        .attr('x', d => d.name in colorMapping ? 40 :0)
         .attr('y', d => d.name in colorMapping ? 5: 0)
         .attr('text-anchor', d => d.name in colorMapping ? 'middle' : 'end')
         .style('fill', d => d.name in nodeTitleColorMapping ? nodeTitleColorMapping[d.name] : 'white')
