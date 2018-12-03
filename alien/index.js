@@ -1,5 +1,3 @@
-
-
 var stackSVG = d3.select('#stackSVG');
 var stackSVGWidth = +stackSVG.attr('width');
 var stackSVGheighth = +stackSVG.attr('height');
@@ -66,7 +64,7 @@ var stackInnerHeight = stackSVGheighth - stackpadding.t - stackpadding.b;
 var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
 
 // scroll sections below
-
+var brushCell = 'undefined';
 var HeatCell = function(colors) {
     this.colors = colors;
     this.getKey = function() {
@@ -260,10 +258,10 @@ function readyToDraw(error, dataset, states) {
     initStack();
     stackYearFilter(1940, 2014);
     initFilterBar();
-    initHeat();
-    drawHeat(processHeatData(heatAndMapUpdated));
     initMap(states);
     drawMap(heatAndMapUpdated);
+    initHeat();
+    drawHeat(processHeatData(heatAndMapUpdated));
     preLoad();
     initSankey();
     drawSankey(processSankeyData(sankeyUpdated));
@@ -567,7 +565,6 @@ var drawMap = function(points) {
     }
 
     function getComments(comments) {
-        
         var res =  comments.replace(/[(&#44)]/g, '');
         return res;
 
@@ -733,6 +730,7 @@ var initStack = function() {
 }
 
 var initHeat = function() {
+    /*
     var filted = events.filter(d => d.year >= 1940 && d.year <= 2014);
     var stackData = processStackData(filted);
     var maxSumCount = d3.max(stackData, (d) => {
@@ -741,87 +739,7 @@ var initHeat = function() {
             });
             return d3.sum(vals);
     });
-
-    
-    var filterxScale = d3.scaleLinear() 
-        .domain([1940, 2014])
-        .range([0, heatFilterInnerWidth]);
-
-    var filteryScale = d3.scaleLinear()
-        .domain([0, maxSumCount])
-        .range([heatFilterInnerHeight, 0]);
-    /*
-    var innerFilter = heatSVG.append('g')
-        .attr('class', 'inner-filter')
-        .attr('transform', 'translate(' + heatFilterpadding.l + ',' + heatFilterpadding.t + ')');
-    
-    innerFilter.append('g')
-        .attr('class', 'heatFilter-x-axis ticks')
-        .attr('transform', 'translate(0,' + heatFilterInnerHeight + ')')
-        .call(d3.axisBottom().scale(filterxScale));
-    
-    innerFilter.append('g')
-        .attr('class', 'heatFilter-y-axis ticks')
-        .attr('transform', 'translate(0,0)')
-        .call(d3.axisLeft().scale(filteryScale));
-
-    var keys = ['black', 'silver', 'white','blue', 'green', 'yellow', 'orange', 'red'];
-    var stack = d3.stack()
-        .keys(keys)
-        .order(d3.stackOrderNone)
-        .offset(d3.stackOffsetNone);
-    
-    var series = stack(stackData);
-    var area = d3.area()
-        .x(d => filterxScale(d.data.date))
-        .y0(d => filteryScale(d[0]))
-        .y1(d => filteryScale(d[1]));
-
-    var stackArea = innerFilter.selectAll('.event')
-        .data(series, d => d);
-
-    stackArea.enter()
-        .append('g')
-        .attr('class', d => 'event ' + d.key)
-        .merge(stackArea)
-        .append('path')
-        .attr('d', area)
-        .attr('class', 'stack-path')
-        .style('fill', d => colorMapping[d.key])
-        .style('fill-opacity', 0.7)
-        .style('stroke', d => colorMapping[d.key])
-        .style('stroke-width', 2)
-
-    stackArea.exit().remove();
-    // brush
-
-    var brushStart = function() {
-        
-    }
-    var brushMove = function() {
-        var s = d3.event.selection;
-        if (s) {
-            heatYearFilter(filterxScale.invert(s[0]), filterxScale.invert(s[1]));
-            //updateFilterStackColor(filterxScale.invert(s[0]), filterxScale.invert(s[1]));
-        }
-    }
-
-    var brushEnd = function() {
-    }
-
-    var brush = d3.brushX()
-        .extent([[0, 0], [heatFilterInnerWidth, heatFilterInnerHeight]])
-        .on('start', brushStart)
-        .on('brush', brushMove)
-        .on('end', brushEnd);
-    
-    var brushG = innerFilter.append('g')
-        .attr('class', 'brush')
-        .call(brush);
-    
-    brush.move(brushG, [1940, 2014].map(filterxScale));
     */
-    
     // real heat map
 
     var inner = heatSVG.append('g')
@@ -830,7 +748,7 @@ var initHeat = function() {
 
     var heatxScale = d3.scaleLinear()
         .domain([1, 31])    
-        .range([heatMapWidth, heatInnerWidth - heatMapWidth]);
+        .range([heatMapWidth * 1.1 , heatInnerWidth - 0.6 * heatMapWidth]);
     
     var heatyScale = d3.scaleLinear()
         .domain([1, 12])
@@ -876,7 +794,75 @@ var initHeat = function() {
         .append('text')
         .attr('y', 40)
         .attr('text-anchor', 'middle')
-        .text('Drag the timeline to filter the time')
+        .text('Drag the timeline to filter the time');
+
+    var lastSelection = [[0, 0], [0, 0]];
+    function brushstart() {
+        var mapInner = mapSVG.select('.map-inner');
+        var x = +d3.event.sourceEvent.x;
+        var y = +d3.event.sourceEvent.y;
+        if (x < lastSelection[0][0] || x > lastSelection[1][0] 
+            || y < lastSelection[0][1] || y > lastSelection[1][1]) {
+            inner.selectAll('.big-cell')
+            .classed('hidden', false);
+            mapInner.selectAll('.event-point')
+            .classed('hidden', false);
+        }
+    }
+
+    function brushmove() {
+        var e = d3.event.selection;
+        if (!e) {
+            return;
+        }
+        
+        var px1 = Math.round(heatxScale.invert(e[0][0]) + 0.5) - 0.5;
+        var py1 = Math.round(heatyScale.invert(e[0][1]))
+        var px2 = Math.round(heatxScale.invert(e[1][0]) + 0.5) - 0.5;
+        var py2 = Math.round(heatyScale.invert(e[1][1]))
+        inner.selectAll('.big-cell')
+            .classed('hidden', d => {
+                var y = d.colors.month;
+                var x = d.colors.day;
+                return x < px1 || x > px2 || y < py1 || y > py2 - 0.5;
+            })
+            
+    }
+    
+    function brushend() {
+        //if (!d3.event.sourceEvent) return;
+        var e = d3.event.selection;
+        if (!e) {
+            return;
+        }
+        var mapInner = mapSVG.select('.map-inner');
+        var px1 = Math.round(heatxScale.invert(e[0][0]) + 0.5) - 0.5;
+        var py1 = Math.round(heatyScale.invert(e[0][1]))
+        var px2 = Math.round(heatxScale.invert(e[1][0]) + 0.5) - 0.5;
+        var py2 = Math.round(heatyScale.invert(e[1][1]))
+        /*
+        d3.select(this).transition().call(d3.event.target.move, 
+            [[heatxScale(px1), heatyScale(py1)], [heatxScale(px2), heatyScale(py2)]]);
+        console.log(e);
+        */
+       mapInner.selectAll('.event-point')
+        .classed('hidden', d => {
+            var x = +d.day;
+            var y = +d.month;
+            return x < px1 || x > px2 || y < py1 || y > py2 - 0.5;
+        });
+        lastSelection = e;
+    }
+
+    var brush = d3.brush()
+        .extent([[0, 0], [heatInnerWidth, heatInnerHeight + 2 * heatMapHeight]])
+        .on('start', brushstart)
+        .on('brush', brushmove)
+        .on('end', brushend);
+    
+    inner.append('g')
+        .attr('class', 'brush')
+        .call(brush);
     
 }
 
@@ -1041,7 +1027,7 @@ var drawHeat = function(heatData) {
             .attr('width', cellWidth)
             .attr('height', cellHeight)
             .style('fill', d => colorMapping[d.color])
-            .style('fill-opacity', d =>  opacityScale(d.value))
+            .style('fill-opacity', d =>  1 * opacityScale(d.value))
             .style('stroke', d => d.color == 'black' ? 'white' : '') 
             .style('stroke-opacity', d => d.color == 'black' ? opacityScale(d.value) : '');
         
@@ -1071,6 +1057,8 @@ var drawHeat = function(heatData) {
     var bigCellEnter = bigCell.enter()
         .append('g')
         .attr('class', 'big-cell')
+        .attr('x', d => d.colors.day)
+        .attr('y', d => d.colors.month)
     
     bigCellEnter.merge(bigCell);
 
@@ -1079,15 +1067,6 @@ var drawHeat = function(heatData) {
     });
 
     bigCell.exit().remove();
-
-
-    /*
-    enter.each(function(cell) {
-        cell.update2(this);
-    });
-    */
-        //enter.merge(bigCell);
-    
 }
 
 var processSankeyData = function(data) {
@@ -1387,7 +1366,6 @@ var drawSankey = function(graph) {
 
 }
 
-
 var yearFilter = function(d, start, end) {
     return d.year >= start && d.year <= end;
 }
@@ -1405,11 +1383,6 @@ var updateHeatAndMap = function(start, end) {
     heatAndMapUpdated = events.filter(d => (yearFilter(d, start, end)) && colorFilter(d));
     drawHeat(processHeatData(heatAndMapUpdated));
     drawMap(heatAndMapUpdated);
-}
-
-var mapYearFilter = function(start, end) {
-    mapUpdated = events.filter(d => (yearFilter(d, start, end)));
-    drawMap(mapUpdated);
 }
 
 var getNodePosition = function(nodes) {
