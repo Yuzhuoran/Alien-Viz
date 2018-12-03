@@ -567,7 +567,9 @@ var drawMap = function(points) {
     }
 
     function getComments(comments) {
-        return comments.replace(/[(&#44)]/g, '')
+        
+        var res =  comments.replace(/[(&#44)]/g, '');
+        return res;
 
     }
 }
@@ -1039,7 +1041,7 @@ var drawHeat = function(heatData) {
             .attr('width', cellWidth)
             .attr('height', cellHeight)
             .style('fill', d => colorMapping[d.color])
-            .style('fill-opacity', d =>  1* opacityScale(d.value))
+            .style('fill-opacity', d =>  opacityScale(d.value))
             .style('stroke', d => d.color == 'black' ? 'white' : '') 
             .style('stroke-opacity', d => d.color == 'black' ? opacityScale(d.value) : '');
         
@@ -1055,7 +1057,7 @@ var drawHeat = function(heatData) {
         //console.log(vals);
         return d3.max(vals);
     });
-    var opacityScale = d3.scaleLinear().domain([0, heatMaxColor]);
+    var opacityScale = d3.scaleLinear().domain([0, heatMaxColor])
 
     var cells = [];
     heatData.forEach(d => cells.push(new HeatCell(d)));
