@@ -64,7 +64,12 @@ var stackInnerHeight = stackSVGheighth - stackpadding.t - stackpadding.b;
 var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
 
 // scroll sections below
-var brushCell = 'undefined';
+var brushcell = 'undefined';
+var brush = d3.brush()
+    .extent([[0, 0], [heatInnerWidth, heatInnerHeight + 2 * heatMapHeight]])
+    .on('start', brushstart)
+    .on('brush', brushmove)
+    .on('end', brushend);
 var HeatCell = function(colors) {
     this.colors = colors;
     this.getKey = function() {
@@ -469,6 +474,7 @@ var initFilterBar = function() {
         // update
         updateSankey(startYear, endYear);
         updateHeatAndMap(startYear, endYear);
+        heatSVG.select('.heat-inner').select('.brush').call(brush.move, null);
     }
 }
 
@@ -796,69 +802,10 @@ var initHeat = function() {
         .attr('text-anchor', 'middle')
         .text('Drag the timeline to filter the time');
 
-    var lastSelection = [[0, 0], [0, 0]];
-    function brushstart() {
-        var mapInner = mapSVG.select('.map-inner');
-        var x = +d3.event.sourceEvent.x;
-        var y = +d3.event.sourceEvent.y;
-        if (x < lastSelection[0][0] || x > lastSelection[1][0] 
-            || y < lastSelection[0][1] || y > lastSelection[1][1]) {
-            inner.selectAll('.big-cell')
-            .classed('hidden', false);
-            mapInner.selectAll('.event-point')
-            .classed('hidden', false);
-        }
-    }
 
-    function brushmove() {
-        var e = d3.event.selection;
-        if (!e) {
-            return;
-        }
-        
-        var px1 = Math.round(heatxScale.invert(e[0][0]) + 0.5) - 0.5;
-        var py1 = Math.round(heatyScale.invert(e[0][1]))
-        var px2 = Math.round(heatxScale.invert(e[1][0]) + 0.5) - 0.5;
-        var py2 = Math.round(heatyScale.invert(e[1][1]))
-        inner.selectAll('.big-cell')
-            .classed('hidden', d => {
-                var y = d.colors.month;
-                var x = d.colors.day;
-                return x < px1 || x > px2 || y < py1 || y > py2 - 0.5;
-            })
-            
-    }
-    
-    function brushend() {
-        //if (!d3.event.sourceEvent) return;
-        var e = d3.event.selection;
-        if (!e) {
-            return;
-        }
-        var mapInner = mapSVG.select('.map-inner');
-        var px1 = Math.round(heatxScale.invert(e[0][0]) + 0.5) - 0.5;
-        var py1 = Math.round(heatyScale.invert(e[0][1]))
-        var px2 = Math.round(heatxScale.invert(e[1][0]) + 0.5) - 0.5;
-        var py2 = Math.round(heatyScale.invert(e[1][1]))
-        /*
-        d3.select(this).transition().call(d3.event.target.move, 
-            [[heatxScale(px1), heatyScale(py1)], [heatxScale(px2), heatyScale(py2)]]);
-        console.log(e);
-        */
-       mapInner.selectAll('.event-point')
-        .classed('hidden', d => {
-            var x = +d.day;
-            var y = +d.month;
-            return x < px1 || x > px2 || y < py1 || y > py2 - 0.5;
-        });
-        lastSelection = e;
-    }
 
-    var brush = d3.brush()
-        .extent([[0, 0], [heatInnerWidth, heatInnerHeight + 2 * heatMapHeight]])
-        .on('start', brushstart)
-        .on('brush', brushmove)
-        .on('end', brushend);
+
+
     
     inner.append('g')
         .attr('class', 'brush')
@@ -1383,6 +1330,7 @@ var updateHeatAndMap = function(start, end) {
     heatAndMapUpdated = events.filter(d => (yearFilter(d, start, end)) && colorFilter(d));
     drawHeat(processHeatData(heatAndMapUpdated));
     drawMap(heatAndMapUpdated);
+    brush.move(d3.select(brushcell), null);
 }
 
 var getNodePosition = function(nodes) {
@@ -1436,6 +1384,61 @@ var updateSankeyColor = function(color) {
     sankeySVG.select('.duration-inner')
         .selectAll('.color-bar')
         .style('fill-opacity', d => (color == 'all' || d.color == color) ? d.colorScale : d.colorScale * 0.1);
+}
+
+function brushstart() {
+    var mapInner = mapSVG.select('.map-inner');
+    var inner = heatSVG.select('.heat-inner');
+    if (true) {
+        inner.selectAll('.big-cell')
+            .classed('hidden', false);
+        mapInner.selectAll('.event-point')
+            .classed('hidden', false);
+    }
+}
+
+function brushmove() {
+    var e = d3.event.selection;
+    if (!e) {
+        return;
+    }
+    
+    var heatxScale = d3.scaleLinear()
+        .domain([1, 31])    
+        .range([heatMapWidth * 1.1 , heatInnerWidth - 0.6 * heatMapWidth]);
+    
+    var heatyScale = d3.scaleLinear()
+        .domain([1, 12])
+        .range([0, heatInnerHeight]);
+    var mapInner = mapSVG.select('.map-inner');
+    var inner = heatSVG.select('.heat-inner');
+    var px1 = Math.round(heatxScale.invert(e[0][0]) + 0.5) - 0.5;
+    var py1 = Math.round(heatyScale.invert(e[0][1]))
+    var px2 = Math.round(heatxScale.invert(e[1][0]) + 0.5) - 0.5;
+    var py2 = Math.round(heatyScale.invert(e[1][1]))
+    inner.selectAll('.big-cell')
+        .classed('hidden', d => {
+            var y = d.colors.month;
+            var x = d.colors.day;
+            return x < px1 || x > px2 || y < py1 || y > py2 - 0.5;
+        })
+    mapInner.selectAll('.event-point')
+        .classed('hidden', d => {
+            var x = +d.day;
+            var y = +d.month;
+            return x < px1 || x > px2 || y < py1 || y > py2 - 0.5;
+        });
+        
+}
+
+function brushend() {
+    //if (!d3.event.sourceEvent) return;
+    var e = d3.event.selection;
+    if (!e) {
+        return;
+    }
+    brushcell = this;
+
 }
 
 
