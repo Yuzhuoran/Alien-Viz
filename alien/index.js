@@ -533,23 +533,32 @@ var drawMap = function(points) {
         .attr('r', 3.5)
         .style('fill', d => colorMapping[d.color])
         .style('fill-opacity', 0.6)
-        .on('mouseover', d => {
+        .on('mouseover', function(d) {
+            d3.select(this).transition()
+                .duration(200)
+                .attr('r', 8)
+            d3.select(this).style('cursor', 'pointer')
+            
+        })
+        .on('mouseout', function(d) {
+            //d3.select('#maptoolTip').classed('hidden', true);
+            d3.select(this).transition()
+                .duration(200)
+                .attr('r', 3.5)
+        })
+        .on('click', function(d) {
             d3.select('#maptoolTip').classed('hidden', false)
             d3.select('#ufoColor').text(d.color);
             d3.select('#ufoShape').text(d.shape in shapeTransform ? shapeTransform[d.shape] : 'unknown');
             d3.select('#ufoDuration').text(getDurationFormat(d.duration));
             d3.select('#ufoTime').text(d.date.toLocaleString());
             d3.select('#ufoLocation').text(d.city);
-            d3.select('#ufoDetail').text(d.comments);
+            d3.select('#ufoDetail').text(getComments(d.comments));
             var url = 'images/' + shapeTransform[d.shape] + '_' 
                 + (d.color == 'silver' ? 'gray' : d.color)+ '.png';
             if (url in images) {
                 d3.select('#ufoIcon').attr('src', url);
             }
-            
-        })
-        .on('mouseout', d => {
-            d3.select('#maptoolTip').classed('hidden', true);
         })
 
     mapPoint.exit().remove();
@@ -558,6 +567,11 @@ var drawMap = function(points) {
         var minute = Math.round(duration / 60);
         var seconds = duration % 60;
         return minute > 0 ? minute + ' m' : seconds + ' s'
+    }
+
+    function getComments(comments) {
+        return comments.replace(/[(&#44)]/g, '')
+
     }
 }
 
@@ -794,16 +808,6 @@ var initHeat = function() {
     }
 
     var brushEnd = function() {
-    }
-
-    var updateFilterStackColor = function(start, end) {
-        var temp = innerFilter.selectAll('.stack-path')
-        temp.style('fill', d => d.data.date <= end && d.data.date >= start ?
-            colorMapping[d.key] : '')
-            .style('fill-opacity', 0.7)
-            .style('stroke', d  => d.data.date <= end && d.data.date >= start ?
-            colorMapping[d.key] : '')
-            .style('stroke-width', 2)
     }
 
     var brush = d3.brushX()
@@ -1074,9 +1078,6 @@ var drawHeat = function(heatData) {
 }
 
 var processSankeyData = function(data) {
-
-
-    //var colors = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
     // source, target, count
     var temp = {};
     data.forEach((d) => {
@@ -1155,14 +1156,13 @@ var initSankey = function() {
         .attr('text-anchor', 'middle')
         .text('Select a color to observe patterns')
         
-
     sanekyInner.append('g')
         .attr('stroke', '#000')
         .attr('class', 'node-group');
 
     sanekyInner.append('g')
         .attr('fill', 'none')
-        .attr('stroke-opacity', 0.5)
+        .attr('stroke-opacity', 0.1)
         .attr('class', 'link-group')
 
     var durationInner = sankeySVG.append('g')
@@ -1231,23 +1231,28 @@ var initSankey = function() {
         .enter()
         .append('linearGradient')
         .attr('class', 'gradient')
-        .attr('id', (d, i) => d)
+        .attr('id', (d, i) => 'gradient-'+d.start)
+        .attr("gradientUnits", "userSpaceOnUse")
 
     gradients.append('stop')
-        .attr('class', 'start')
         .attr('stop-color', d => colorMapping[d.start])
+        .attr('stop-opacity', 0.8)
         .attr('offset', '0%');
 
     gradients.append('stop')
-        .attr('class', 'end')
-        .attr('stop-color', d => 'red')
+        .attr('stop-color', d => colorMapping[d.start])
+        .attr('stop-opacity', 0.4)
+        .attr('offset', '50%');
+
+    gradients.append('stop')
+        //.attr('stop-color', d => colorMapping[d.start])
+        .attr('stop-color', d => colorMapping[d.start])
+        .attr('stop-opacity', 0.1)
         .attr('offset', '100%');
         
         
 }
 var drawSankey = function(graph) {
-    //console.log(graph);
-    // data
     var durations = events;
     //var keys = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
     var keys = [];
@@ -1324,10 +1329,11 @@ var drawSankey = function(graph) {
         .attr('class', 'link')
         .merge(linksTemp)
         .attr('d', d3.sankeyLinkHorizontal())
-        //.style('stroke', d => `url(#${d.color})`)
-        .style('stroke', d => colorMapping[d.color])
+        .style('stroke', d => `url(#gradient-${d.color})`)
+        //.style('stroke', d => colorMapping[d.color])
         .style('stroke-width', d => Math.max(1, d.width))
-        .style('stroke-opacity', 0.8);
+        .style('stroke-opacity', d => 1);
+        //.style('stroke-opacity', d =>`url(#gradient-${d.color})`);
 
     linksTemp.exit().remove();
 
