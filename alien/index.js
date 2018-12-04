@@ -225,7 +225,7 @@ var validate = function(data) {
 var images = {};
 function preLoad() {
     var shapes = ['change','chevron', 'cigar', 'circle', 'diamond', 'disk', 'fireball', 'light'
-        , 'oval', 'rectangle', 'teardrop', 'triangle'];
+        , 'oval', 'rectangle', 'teardrop', 'triangle', 'formation', 'other', 'cylinder'];
     var colors = ['black', 'blue', 'gray', 'white','green', 'yellow', 'orange', 'red'];
     for (var i = 0; i < shapes.length; i++) {
         for (var j = 0; j < colors.length; j++) {
@@ -245,7 +245,7 @@ d3.queue()
             'city': row['city'],
             'state': row['state'],
             'country': row['country'],
-            'shape': row['shape'],
+            'shape': row['shape'].toLowerCase() in shapeTransform ? shapeTransform[row['shape'].toLowerCase()] : 'other',
             'duration': +row['duration (seconds)'],
             'comments': row['comments'],
             'lat': +row['latitude'],
@@ -563,7 +563,7 @@ var drawMap = function(points) {
         .on('click', function(d) {
             d3.select('#maptoolTip').classed('hidden', false)
             d3.select('#ufoColor').text(d.color);
-            d3.select('#ufoShape').text(d.shape in shapeTransform ? shapeTransform[d.shape] : 'unknown');
+            d3.select('#ufoShape').text(d.shape in shapeTransform ? shapeTransform[d.shape] : 'other');
             d3.select('#ufoDuration').text(getDurationFormat(d.duration));
             d3.select('#ufoTime').text(d.date.toLocaleString());
             d3.select('#ufoLocation').text(d.city);
@@ -1401,7 +1401,8 @@ var updateSankeyColor = function(color) {
             return '';
         })
         .style('stroke', d => {
-            return (color == 'all' || d.name == color) ? colorMapping[d.name] : '';
+            return (color == 'all' || d.name == color) ? 
+                (d.name == 'black' || (!(d.name in colorMapping)) ? '#969696' : colorMapping[d.name]) : '';
         })
 
     sankeySVG.select('.sankey-inner')
