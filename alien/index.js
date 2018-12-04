@@ -64,6 +64,19 @@ var stackInnerHeight = stackSVGheighth - stackpadding.t - stackpadding.b;
 var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
 
 // scroll sections below
+var heatTip = d3.tip().attr('class', 'd3-tip heat-tip')
+    .html(function(d) {
+        var s = '';
+        for (var k in d.colors) {
+            if (k == 'day' || k == 'month') {
+                continue;
+            }
+            s += '<p class="tip">' + k + ': ' + d.colors[k] + '</p>'
+        }
+        return s;
+    });
+
+
 var brushcell = 'undefined';
 var brush = d3.brush()
     .extent([[0, 0], [heatInnerWidth, heatInnerHeight + 2 * heatMapHeight]])
@@ -647,7 +660,7 @@ var initStack = function() {
         .append('text')
         .attr('y', 40)
         .attr('text-anchor', 'middle')
-        .text('Drag tbe timeline and select a state to observe trends over yearse');
+        .text('Drag tbe timeline and select a state to observe trends over years');
 
     var yearAxisStart = 300;
     var x = d3.scaleLinear()
@@ -912,7 +925,10 @@ var processHeatData = function(data) {
     return result;
 }
 
+
+
 var drawHeat = function(heatData) {
+
     var heatxScale = d3.scaleLinear()
         .domain([1, 32])
         .range([0, heatInnerWidth]);
@@ -923,6 +939,7 @@ var drawHeat = function(heatData) {
 
     HeatCell.prototype.update2 = function(g) {
         // get the x, y
+
         var _this = this;
         var y = heatyScale(+_this.colors.month) + heatMapHeight / 2;
         var x = heatxScale(+_this.colors.day) + heatMapWidth / 2;
@@ -997,6 +1014,8 @@ var drawHeat = function(heatData) {
 
     var heatInner = heatSVG.select('.heat-inner');
 
+    heatInner.call(heatTip)
+
     var bigCell = heatInner
         .selectAll('.big-cell')
         .data(cells, d => d.getKey())
@@ -1006,6 +1025,8 @@ var drawHeat = function(heatData) {
         .attr('class', 'big-cell')
         .attr('x', d => d.colors.day)
         .attr('y', d => d.colors.month)
+        .on('mouseover', heatTip.show)
+        .on('mouseout', heatTip.hide);
     
     bigCellEnter.merge(bigCell);
 
@@ -1067,6 +1088,7 @@ var processSankeyData = function(data) {
         links[i].target = nodePosition[links[i].target];
     });
     var sankeyTemp = d3.sankey()
+        .nodeWidth(80)
         .nodePadding(5)
         .extent([[0, 0], [sankeyInnerWidth, sanekyInnerHeight]]);
     return sankeyTemp.nodes(nodes).links(links)();
@@ -1259,7 +1281,9 @@ var drawSankey = function(graph) {
 
     var sanekyInner = sankeySVG.select('.sankey-inner');
 
-    graph.links.sort((a, b) => a.color.localeCompare(b.color));
+    graph.links.sort((a, b) => b.color.localeCompare(a.color));
+
+    console.log(graph.links);
 
     var linksTemp = sanekyInner.select('.link-group')
         .selectAll('.link')
@@ -1267,13 +1291,13 @@ var drawSankey = function(graph) {
     
     linksTemp.enter()
         .append('path')
-        .attr('class', 'link')
+        .attr('class', d => 'link ' + d.color + '-link')
         .merge(linksTemp)
         .attr('d', d3.sankeyLinkHorizontal())
         //.style('stroke', d => `url(#gradient-${d.color})`)
         .style('stroke', d => colorMapping[d.color])
         .style('stroke-width', d => Math.max(1, d.width))
-        .style('stroke-opacity', d => 0.8);
+        .style('stroke-opacity', d => 0.8)
         //.style('stroke-opacity', d =>`url(#gradient-${d.color})`);
 
     linksTemp.exit().remove();
@@ -1294,7 +1318,9 @@ var drawSankey = function(graph) {
         .attr('height', d => d.y1 - d.y0)
         .attr('width', d => d.width ? d.width : d.x1 - d.x0)
         .style('fill', d => d.name in colorMapping ? colorMapping[d.name] : '') 
-        .style('stroke',  d => d.name in colorMapping ? colorMapping[d.name] : '')
+        //.style('stroke',  'white')
+        .style('stroke',  d => d.name in colorMapping ? 
+            (d.name == 'black' ? '#969696' : colorMapping[d.name]) : '#969696')
 
     var texts = sanekyInner.selectAll('.node-title')
         .data(graph.nodes)
@@ -1304,7 +1330,7 @@ var drawSankey = function(graph) {
         .attr('class', 'node-title')
         .merge(texts)
         .attr('transform', d => 'translate(' + (d.x0 + d.width) + ',' + (d.y1 + d.y0) / 2 +') rotate(180)')
-        .attr('x', d => d.name in colorMapping ? 40 :0)
+        .attr('x', d => d.name in colorMapping ? 40 :-5)
         .attr('y', d => d.name in colorMapping ? 5: 0)
         .attr('text-anchor', d => d.name in colorMapping ? 'middle' : 'end')
         .style('fill', d => d.name in nodeTitleColorMapping ? nodeTitleColorMapping[d.name] : 'white')
