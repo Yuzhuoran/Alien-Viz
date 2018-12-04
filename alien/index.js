@@ -631,6 +631,24 @@ var initStack = function() {
         .append('text')
         .text('TIMES');
 
+    var stackTitles = stackSVG.append('g')
+        .attr('class', 'title-group')
+        .attr('transform', 'translate(' + (stackSVGWidth / 2) + ', 40)')
+    
+
+    stackTitles.append('g')
+        .attr('class', 'title')
+        .append('text')
+        .attr('text-anchor', 'middle')
+        .text('STATES & COLORS & AMOUNTS');
+
+    stackTitles.append('g')
+        .attr('class', 'description')
+        .append('text')
+        .attr('y', 40)
+        .attr('text-anchor', 'middle')
+        .text('Drag tbe timeline and select a state to observe trends over yearse');
+
     var yearAxisStart = 300;
     var x = d3.scaleLinear()
         .domain([1940, 2014])
@@ -679,7 +697,7 @@ var initStack = function() {
 
     var slider = stackSVG.append('g')
         .attr('class', 'slider')
-        .attr('transform', 'translate(' + stackpadding.l + ',' + 160 + ')');
+        .attr('transform', 'translate(' + stackpadding.l + ',' + 220 + ')');
 
     slider.append('text')
         .attr('transform', 'translate(' + 200 + ',10)')
@@ -731,22 +749,9 @@ var initStack = function() {
         .call(rightDrag);
     
     handleRight.exit().remove();
-    
-    
 }
 
 var initHeat = function() {
-    /*
-    var filted = events.filter(d => d.year >= 1940 && d.year <= 2014);
-    var stackData = processStackData(filted);
-    var maxSumCount = d3.max(stackData, (d) => {
-            var vals = d3.keys(d).map((key) => {
-                return key !== 'date' ? d[key] : 0;
-            });
-            return d3.sum(vals);
-    });
-    */
-    // real heat map
 
     var inner = heatSVG.append('g')
         .attr('class', 'heat-inner')
@@ -801,11 +806,6 @@ var initHeat = function() {
         .attr('y', 40)
         .attr('text-anchor', 'middle')
         .text('Drag the timeline to filter the time');
-
-
-
-
-
     
     inner.append('g')
         .attr('class', 'brush')
@@ -1268,10 +1268,10 @@ var drawSankey = function(graph) {
         .attr('class', 'link')
         .merge(linksTemp)
         .attr('d', d3.sankeyLinkHorizontal())
-        .style('stroke', d => `url(#gradient-${d.color})`)
-        //.style('stroke', d => colorMapping[d.color])
+        //.style('stroke', d => `url(#gradient-${d.color})`)
+        .style('stroke', d => colorMapping[d.color])
         .style('stroke-width', d => Math.max(1, d.width))
-        .style('stroke-opacity', d => 1);
+        .style('stroke-opacity', d => 0.8);
         //.style('stroke-opacity', d =>`url(#gradient-${d.color})`);
 
     linksTemp.exit().remove();
@@ -1379,7 +1379,7 @@ var updateSankeyColor = function(color) {
     sankeySVG.select('.sankey-inner')
         .select('.link-group')
         .selectAll('.link')
-        .style('stroke-opacity', d => (color == 'all' || d.color == color) ? 0.8 : 0.1);
+        .style('stroke-opacity', d => (color == 'all' || d.color == color) ? 0.8 : 0.2);
 
     sankeySVG.select('.duration-inner')
         .selectAll('.color-bar')
