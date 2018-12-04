@@ -1192,7 +1192,8 @@ var initSankey = function() {
         
 }
 var drawSankey = function(graph) {
-    var durations = events;
+    var durations = sankeyUpdated;
+    
     //var keys = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
     var keys = [];
     graph.nodes.forEach(d => {
@@ -1212,7 +1213,7 @@ var drawSankey = function(graph) {
             colorCount[d.color]['totalCount']++;
         }
     });
-
+    var totalCount = durations.length;
     barData = [];
     for (var color in colorCount) {
         for (var duration in colorCount[color]) {
@@ -1222,7 +1223,8 @@ var drawSankey = function(graph) {
             barData.push({
                 'duration': +duration / 60,
                 'color': color,
-                'colorScale': +colorCount[color][duration] * 20.0 / colorCount[color]['totalCount']
+                //'colorScale': +colorCount[color][duration] * 20.0 / colorCount[color]['totalCount']
+                'colorScale': +colorCount[color][duration] * 40 / totalCount
             });
         }
     }
