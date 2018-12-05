@@ -108,7 +108,8 @@ var stateTip = d3.tip().attr('class', 'd3-tip state-tip')
 var barTip = d3.tip().attr('class', 'd3-tip bar-tip')
     .html(function(d) {
         var s = '<p class="tip"> color: ' + d.color + '</p>'
-            + '<p class="tip"> duration: ' + getDurationFormat(d.duration * 60) + '</p>';
+            + '<p class="tip"> duration: ' + getDurationFormat(d.duration * 60) + '</p>'
+            + '<p class="tip"> frequency: ' + d.count + '</p>'
         return s;
     });
 
@@ -123,7 +124,7 @@ var linkTip = d3.tip().attr('class', 'd3-tip link-tip').attr('id', 'linkTip')
 
 var brushRect = {
     'data':'',
-    'all': true
+    'showAll': true
 }
 var brushcell = 'undefined';
 var brush = d3.brush()
@@ -1442,7 +1443,8 @@ var drawSankey = function(graph) {
                 'duration': duration / 60,
                 'color': color,
                 //'colorScale': +colorCount[color][duration] * 20.0 / colorCount[color]['totalCount']
-                'colorScale': +colorCount[color][duration] * 40 / totalCount
+                'colorScale': +colorCount[color][duration] * 40 / totalCount,
+                'count': +colorCount[color][duration]
             });
         }
     }
@@ -1652,16 +1654,19 @@ var updateSankeyColor = function() {
 }
 
 function brushstart() {
+    brushRect.showAll = true;
+    console.log('start ' + brushRect.showAll);
+    getStateColorCount((d) => true);
+    updateState();
+    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), d => true);
+    updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
     var mapInner = mapSVG.select('.map-inner');
     var inner = heatSVG.select('.heat-inner');
     inner.selectAll('.big-cell')
         .classed('hidden', false);
     mapInner.selectAll('.event-point')
         .classed('hidden', false);
-    brushFilter.showAll = true;
-    getStateColorCount((d) => true);
-    updateState();
-    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), d => true);
+
 }
 
 function brushmove() {
