@@ -121,6 +121,10 @@ var linkTip = d3.tip().attr('class', 'd3-tip link-tip').attr('id', 'linkTip')
     })
 
 
+var brushRect = {
+    'data':'',
+    'all': true
+}
 var brushcell = 'undefined';
 var brush = d3.brush()
     .extent([[0, 0], [heatInnerWidth, heatInnerHeight + 2 * heatMapHeight]])
@@ -1501,7 +1505,9 @@ var drawSankey = function(graph) {
                 .attr('cy', d3.event.offsetY - 5) // 5 pixels above the cursor
                 .node();
             linkTip.show(d, target)
-            d3.select(this).style('stroke-opacity', 0.4);
+            if (selectedColorGroup['showAll'] || selectedColorGroup[d.color]) {
+                d3.select(this).style('stroke-opacity', 0.4);
+            }
         })
         .on('mouseout', function(d) {
             var target = d3.select('#tipfollowscursor')
@@ -1509,7 +1515,10 @@ var drawSankey = function(graph) {
                 .attr('cy', d3.event.offsetY - 5) // 5 pixels above the cursor
                 .node();
             linkTip.hide(d, target);
-            d3.select(this).style('stroke-opacity', 0.8);
+            if (selectedColorGroup['showAll'] || selectedColorGroup[d.color]) {
+                d3.select(this).style('stroke-opacity', 0.8);
+            }
+            
         })
 
     linksTemp.exit().remove();
@@ -1572,15 +1581,14 @@ var stackYearFilter = function(start, end) {
 }
 
 var updateHeatAndMap = function(start, end) {
-    heatAndMapUpdated = events.filter(d => (yearFilter(d, start, end) && colorFilter(d) && stateFilter(d)));
+    heatAndMapUpdated = events.filter(d => (yearFilter(d, start, end) && colorFilter(d) && stateFilter(d) && brushFilter(d)) );
     drawHeat(processHeatData(heatAndMapUpdated));
     getStateColorCount((d) => true)
     updateState();
     drawMap(heatAndMapUpdated);
-    brush.move(d3.select(brushcell), null);
-    var e = heatSVG.select('.heat-inner').select('.brush').select('.selection')
-    console.log(e)
-    console.log(d3.brushSelection(brush));
+    //brush.move(d3.select(brushcell), null);
+    //var e = heatSVG.select('.heat-inner').select('.brush').select('.selection')
+    //console.log(d3.brushSelection(brush));
     d3.select('#maptoolTip').classed('hidden', true);
 }
 
@@ -1650,6 +1658,7 @@ function brushstart() {
         .classed('hidden', false);
     mapInner.selectAll('.event-point')
         .classed('hidden', false);
+    brushFilter.showAll = true;
     getStateColorCount((d) => true);
     updateState();
     updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), d => true);
@@ -1707,12 +1716,17 @@ function brushend() {
     var py1 = Math.round(heatyScale.invert(e[0][1]))
     var px2 = Math.round(heatxScale.invert(e[1][0]) + 0.5) - 0.5;
     var py2 = Math.round(heatyScale.invert(e[1][1])) - 0.5;
-    var filter = function(d) {
-        return d.day >= px1 && d.day <= px2 && d.month >= py1 && d.month <= py2;
+    brushRect.data = {
+        'px1': px1,
+        'px2': px2,
+        'py1': py1,
+        'py2': py2,
     }
-    getStateColorCount(filter);
+    console.log(brushRect)
+    brushRect.showAll = false;
+    getStateColorCount(brushFilter);
     updateState();
-    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), filter);
+    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), brushFilter);
 
 }
 
@@ -1725,4 +1739,13 @@ function getDurationFormat(duration) {
     var seconds = duration % 60;
     //return minute > 0 ? `${minute} mins` : `${seconds} sec`;
     return minute > 0 ? minute + ' mins' : seconds + ' sec'
+}
+
+var brushFilter = function(d) {
+    if (brushRect.showAll) {
+        return true;
+    }
+
+    return d.day >= brushRect.data.px1 && d.day <= brushRect.data.px2 
+        && d.month >= brushRect.data.py1 && d.month <= brushRect.data.py2;
 }
