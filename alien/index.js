@@ -655,7 +655,7 @@ var updateState = function() {
             } else {
                 selectedState = stateShort;
             }
-            updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
+            updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), d => true);
             updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
         })
         .on('mouseover', function(d) {
@@ -1055,7 +1055,9 @@ var drawStack = function(colorData) {
     
     var xTick = inner.select('.stackSVG-x-axis')
         .transition()
-        .call(d3.axisBottom().scale(stackxScale));
+        .call(d3.axisBottom().scale(stackxScale).tickFormat((d) => {
+            return d;
+        }));
     var yTick = inner.select('.stackSVG-y-axis')
         .transition()
         .call(d3.axisLeft().scale(stackyScale));
@@ -1566,14 +1568,14 @@ function dragstarted(d) {
 function dragended(d) {
     // update sankey and heat?
     //console.log('year end!!! update')
-    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
+    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), d => true);
     updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
     d3.select(this).classed("active", false);
     d3.select(this).style('cursor', 'default');
 }
 
-var updateSankey = function(start, end) {
-    sankeyUpdated = events.filter(d => (yearFilter(d, start, end) && stateFilter(d)));
+var updateSankey = function(start, end, brushFilter) {
+    sankeyUpdated = events.filter(d => (yearFilter(d, start, end) && stateFilter(d) && brushFilter(d)));
     drawSankey(processSankeyData(sankeyUpdated));
     updateSankeyColor();
 }
@@ -1613,6 +1615,7 @@ function brushstart() {
         .classed('hidden', false);
     getStateColorCount((d) => true);
     updateState();
+    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), d => true);
 }
 
 function brushmove() {
@@ -1672,6 +1675,8 @@ function brushend() {
     }
     getStateColorCount(filter);
     updateState();
+    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), filter);
+
 }
 
 function hideMapTip() {

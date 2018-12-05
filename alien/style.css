@@ -136,4 +136,9 @@ svg {
     display: block;
 }
 
+#filterBar {
+    position:sticky;
+    top: 0px;
+    z-index: 5;
+}
 
