@@ -81,6 +81,7 @@ var heatTip = d3.tip().attr('class', 'd3-tip heat-tip')
                 span = '';
             }
         }
+        
         return s;
     });
 
@@ -103,6 +104,21 @@ var stateTip = d3.tip().attr('class', 'd3-tip state-tip')
         }
         return s;
     });
+
+var barTip = d3.tip().attr('class', 'd3-tip bar-tip')
+    .html(function(d) {
+        var s = '<p class="tip"> color: ' + d.color + '</p>'
+            + '<p class="tip"> duration: ' + getDurationFormat(d.duration * 60) + '</p>';
+        return s;
+    });
+
+var linkTip = d3.tip().attr('class', 'd3-tip link-tip').attr('id', 'linkTip')
+    .html(function(d) {
+        //console.log(d);
+        var s = '<p class="tip"> color: ' + d.color + '</p>'
+            + '<p class="tip"> frequency: ' + d.value + '</p>'
+        return s;
+    })
 
 
 var brushcell = 'undefined';
@@ -741,7 +757,7 @@ var drawMap = function(points) {
             d3.select('#ufoShape').text(d.shape in shapeTransform ? shapeTransform[d.shape] : 'other');
             d3.select('#ufoDuration').text(getDurationFormat(d.duration));
             d3.select('#ufoTime').text(d.date.toLocaleString());
-            d3.select('#ufoLocation').text(d.city);
+            d3.select('#ufoLocation').text(d.city.charAt(0).toUpperCase() + d.city.slice(1));
             d3.select('#ufoDetail').text(getComments(d.comments));
             var url = 'images/' + shapeTransform[d.shape] + '_' 
                 + (d.color == 'silver' ? 'gray' : d.color)+ '.png';
@@ -752,12 +768,6 @@ var drawMap = function(points) {
 
     mapPoint.exit().remove();
 
-    function getDurationFormat(duration) {
-        var minute = Math.round(duration / 60);
-        var seconds = duration % 60;
-        //return minute > 0 ? `${minute} mins` : `${seconds} sec`;
-        return minute > 0 ? minute + 'mins' : seconds + 'sec'
-    }
 
     function getComments(comments) {
         var res =  comments.replace(/[(&#44)]/g, '');
@@ -1306,6 +1316,10 @@ var initSankey = function() {
         .attr('class', 'duration-inner')
         .attr('transform', 'translate(' + durationBarpadding.l 
             + ',' + durationBarpadding.t + ') ');
+
+    sankeySVG.append('circle').attr('id', 'tipfollowscursor');
+
+    durationInner.call(barTip);
     
     var xAxis = durationInner.append('g')
         .attr('class', 'duration-x-axis ticks')
@@ -1386,6 +1400,8 @@ var initSankey = function() {
         .attr('stop-color', d => colorMapping[d.start])
         .attr('stop-opacity', 0.1)
         .attr('offset', '100%');
+
+    sanekyInner.call(linkTip);
         
         
 }
@@ -1452,6 +1468,8 @@ var drawSankey = function(graph) {
         .style('stroke', d => d.color == 'black' ? '#969696' :'')
         .style('stroke-width', d => d.color == 'black' ? 0.5: '')
         .style('stroke-opacity', d => d.color == 'black' ? d.colorScale * 5: '')
+        .on('mouseover', barTip.show)
+        .on('mouseout', barTip.hide);
 
     durationBar.exit().remove();
 
@@ -1477,6 +1495,22 @@ var drawSankey = function(graph) {
         .style('stroke-width', d => Math.max(1, d.width))
         .style('stroke-opacity', d => 0.8)
         //.style('stroke-opacity', d =>`url(#gradient-${d.color})`);
+        .on('mouseover', function(d) {
+            var target = d3.select('#tipfollowscursor')
+                .attr('cx', d3.event.offsetX)
+                .attr('cy', d3.event.offsetY - 5) // 5 pixels above the cursor
+                .node();
+            linkTip.show(d, target)
+            d3.select(this).style('stroke-opacity', 0.4);
+        })
+        .on('mouseout', function(d) {
+            var target = d3.select('#tipfollowscursor')
+                .attr('cx', d3.event.offsetX)
+                .attr('cy', d3.event.offsetY - 5) // 5 pixels above the cursor
+                .node();
+            linkTip.hide(d, target);
+            d3.select(this).style('stroke-opacity', 0.8);
+        })
 
     linksTemp.exit().remove();
 
@@ -1544,6 +1578,9 @@ var updateHeatAndMap = function(start, end) {
     updateState();
     drawMap(heatAndMapUpdated);
     brush.move(d3.select(brushcell), null);
+    var e = heatSVG.select('.heat-inner').select('.brush').select('.selection')
+    console.log(e)
+    console.log(d3.brushSelection(brush));
     d3.select('#maptoolTip').classed('hidden', true);
 }
 
@@ -1681,4 +1718,11 @@ function brushend() {
 
 function hideMapTip() {
     d3.select('#maptoolTip').classed('hidden', true)
+}
+
+function getDurationFormat(duration) {
+    var minute = Math.round(duration / 60);
+    var seconds = duration % 60;
+    //return minute > 0 ? `${minute} mins` : `${seconds} sec`;
+    return minute > 0 ? minute + ' mins' : seconds + ' sec'
 }
