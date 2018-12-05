@@ -598,13 +598,15 @@ var initFilterBar = function() {
         var endYear = Math.round(filterxScale.invert(d.type == 'l' ? boundary : pos));
 
         // update
+        /*
         updateSankey(startYear, endYear);
         updateHeatAndMap(startYear, endYear);
-        heatSVG.select('.heat-inner').select('.brush').call(brush.move, null);
+        */
+        //heatSVG.select('.heat-inner').select('.brush').call(brush.move, null);
     }
 }
 
-var getStateColorCount = function() {
+var getStateColorCount = function(brushFilter) {
     var stateCount = {};
     var keys = ['black', 'silver', 'white','blue', 'green', 'yellow', 'orange', 'red'];
     for (var k in stateShort2Full) {
@@ -613,7 +615,7 @@ var getStateColorCount = function() {
     }
     
     heatAndMapUpdated.forEach((d) => {
-        if (d.state in stateCount && d.color in stateCount[d.state]) {
+        if (brushFilter(d) && d.state in stateCount && d.color in stateCount[d.state]) {
             stateCount[d.state][d.color]++;
         } 
     });
@@ -627,7 +629,6 @@ var getStateColorCount = function() {
 
 var updateState = function() {
 
-    getStateColorCount();
 
     var path2 = d3.geoPath()
         .projection(d3.geoAlbersUsa())
@@ -659,14 +660,13 @@ var updateState = function() {
         })
         .on('mouseover', function(d) {
             d3.select(this).style('fill-opacity', 0.5);
-            console.log(d.properties.colors);
+            stateTip.show(d, this);
         })
         .on('mouseout', function(d) {
             d3.select(this).style('fill-opacity', 1);
+            stateTip.hide(d, this);
 
         })
-        .on('mouseover', stateTip.show)
-        .on('mouseout',  stateTip.hide)
 
     statePath.exit().remove();
         
@@ -683,34 +683,8 @@ var initMap = function(states) {
         .attr('transform', 'translate(' + mappadding.l + ',' + mappadding.t + ')');
 
     mapInner.call(stateTip);
+    getStateColorCount(d => true);
     updateState();
-
-    /*
-    mapInner.selectAll('path')
-        .data(states.features)
-        .enter()
-        .append('path')
-        .attr('d', path2)
-        .style('fill', '#213952')
-        .style('stroke', 'white')
-        .style('stroke-width', 0.5)
-        .on('click', function(d) {
-            var stateShort = stateMapping[d.properties.NAME].toLowerCase();
-            if (selectedState == stateShort) {
-                selectedState = 'all';
-            } else {
-                selectedState = stateShort;
-            }
-            updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
-            updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
-        })
-        .on('mouseover', function(d) {
-            d3.select(this).style('fill-opacity', 0.5);
-        })
-        .on('mouseout', function(d) {
-            d3.select(this).style('fill-opacity', 1);
-        });
-    */
     
     var mapTitles = mapSVG.append('g')
         .attr('class', 'title-group')
@@ -904,10 +878,8 @@ var initStack = function() {
 
     rightDrag.on('drag', rightDragged)
         .on('start', dragstarted)
-        .on('end', dragended);
     
     leftDrag.on('start', dragstarted)
-        .on('end', dragended)
         .on('drag', leftDragged);
 
     var slider = stackSVG.append('g')
@@ -1566,6 +1538,7 @@ var stackYearFilter = function(start, end) {
 var updateHeatAndMap = function(start, end) {
     heatAndMapUpdated = events.filter(d => (yearFilter(d, start, end) && colorFilter(d) && stateFilter(d)));
     drawHeat(processHeatData(heatAndMapUpdated));
+    getStateColorCount((d) => true)
     updateState();
     drawMap(heatAndMapUpdated);
     brush.move(d3.select(brushcell), null);
@@ -1591,6 +1564,10 @@ function dragstarted(d) {
 }
 
 function dragended(d) {
+    // update sankey and heat?
+    //console.log('year end!!! update')
+    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
+    updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
     d3.select(this).classed("active", false);
     d3.select(this).style('cursor', 'default');
 }
@@ -1630,12 +1607,12 @@ var updateSankeyColor = function() {
 function brushstart() {
     var mapInner = mapSVG.select('.map-inner');
     var inner = heatSVG.select('.heat-inner');
-    if (true) {
-        inner.selectAll('.big-cell')
-            .classed('hidden', false);
-        mapInner.selectAll('.event-point')
-            .classed('hidden', false);
-    }
+    inner.selectAll('.big-cell')
+        .classed('hidden', false);
+    mapInner.selectAll('.event-point')
+        .classed('hidden', false);
+    getStateColorCount((d) => true);
+    updateState();
 }
 
 function brushmove() {
@@ -1679,9 +1656,24 @@ function brushend() {
         return;
     }
     brushcell = this;
+    var heatxScale = d3.scaleLinear()
+        .domain([1, 31])    
+        .range([heatMapWidth * 1.1 , heatInnerWidth - 0.6 * heatMapWidth]);
+
+    var heatyScale = d3.scaleLinear()
+        .domain([1, 12])
+        .range([0, heatInnerHeight]);
+    var px1 = Math.round(heatxScale.invert(e[0][0]) + 0.5) - 0.5;
+    var py1 = Math.round(heatyScale.invert(e[0][1]))
+    var px2 = Math.round(heatxScale.invert(e[1][0]) + 0.5) - 0.5;
+    var py2 = Math.round(heatyScale.invert(e[1][1])) - 0.5;
+    var filter = function(d) {
+        return d.day >= px1 && d.day <= px2 && d.month >= py1 && d.month <= py2;
+    }
+    getStateColorCount(filter);
+    updateState();
 }
 
 function hideMapTip() {
     d3.select('#maptoolTip').classed('hidden', true)
 }
-
