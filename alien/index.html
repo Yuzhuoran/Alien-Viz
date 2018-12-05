@@ -14,84 +14,95 @@
             <svg id="intro" width="1440" height="849"></svg>
             <svg id="stackSVG" width="1440" height="650"></svg>
             <div id='container' class='container-1'>
-                <div id='filterBar' style='background-color:#182d47'>
-                    <svg id='filterSVG' width='1440' height='130'></svg>
+                <!--
+                            <div id='filterBar' style='background-color:#182d47'>
+                    <svg id='filterSVG' width='1440' height='130' style='background-color:#182d47'></svg>
                 </div>
+
+                -->
+
+                <svg id='filterSVG' width='1440' height='130' style='background-color:#182d47'></svg>
                 <svg id="sankeySVG" width="1440" height="850"></svg>
                 <svg id="heatSVG" width="1440" height="849"></svg>
-                <div id='mapGroup' width="1440" height="850">
+                <div id='mapGroup'>
                     <div class='row'>
-                        <svg id="mapSVG" width="1000" height="850"></svg>
-                        <div id='maptoolTip' width='440' class='hidden'>
-                            <div class='horizontal-line'></div>
-                            <p class='intro-title'> PROPERTY</p>
-                            <div class='row'> 
-                                <div class='col-8'> 
-                                    <div class='row'>
-                                        <div class='col-6'>
-                                            <p class='info'>COLOR:</p>
-                                        </div>
-                                        <div class='col-4'>
-                                            <p class='attr' id='ufoColor'></p>
-                                        </div>
-                                    </div>
-                                    <div class='row'>
-                                        <div class='col-6'>
-                                            <p class='info'>SHAPE:</p>
-                                        </div>
-                                        <div class='col-4'>
-                                            <p class='attr' id='ufoShape'></p>
-                                        </div>
-                                    </div>
-                                    <div class='row'>
-                                        <div class='col-6'>
-                                            <p class='info'>DURATION:</p>
-                                        </div>
-                                        <div class='col-4'>
-                                            <p class='attr' id='ufoDuration'></p>
-                                        </div>
-                                    </div>                                 
-                                </div>
-                                <div class='col-4'>
-                                    <img id='ufoIcon' width='70', height='78' atl='UFO ICON'>
-                                </div>
-                            </div>
-                            <div id='event'>
-                                <div class='horizontal-line'></div>
-                                <p class='intro-title'> EVENT</p>
-                                <div class='row'>
-                                <div class='col-12 event-block'>
-                                    <div class='row'>
-                                        <div class='col-4'>
-                                            <p class='info'>TIME:</p>
-                                        </div>
-                                        <div class='col-8'>
-                                            <p class='attr' id='ufoTime'></p>
-                                        </div>
-                                    </div>
-                                    <div class='row'>
-                                        <div class='col-4'>
-                                            <p class='info'>LOCAITON:</p>
-                                        </div>
-                                        <div class='col-8'>
-                                            <p class='attr' id='ufoLocation'></p>
-                                        </div>
-                                    </div>
-                                    <div class='row'>
-                                        <div class='col-4'>
-                                            <p class='info'>DETAIL:</p>
-                                        </div>
-                                        <div class='col-8'>
-                                            <p class='attr' id='ufoDetail'></p>
-                                        </div>
-                                    </div> 
-                                </div>                              
-                                </div>
-
-
-                            </div>
-
+                        <div class='col-8'>
+                            <svg id="mapSVG" width="1000" height="850"></svg>
                         </div>
+                        <div class='col-4'>
+                            <div id='maptoolTip' width='440' class='hidden'>
+                                <div class='horizontal-line'></div>
+                                <p class='intro-title'> PROPERTY</p>
+                                <div class='row'> 
+                                    <div class='col-8'> 
+                                        <div class='row'>
+                                            <div class='col-6'>
+                                                <p class='info'>COLOR:</p>
+                                            </div>
+                                            <div class='col-4'>
+                                                <p class='attr' id='ufoColor'></p>
+                                            </div>
+                                        </div>
+                                        <div class='row'>
+                                            <div class='col-6'>
+                                                <p class='info'>SHAPE:</p>
+                                            </div>
+                                            <div class='col-4'>
+                                                <p class='attr' id='ufoShape'></p>
+                                            </div>
+                                        </div>
+                                        <div class='row'>
+                                            <div class='col-6'>
+                                                <p class='info'>DURATION:</p>
+                                            </div>
+                                            <div class='col-4'>
+                                                <p class='attr' id='ufoDuration'></p>
+                                            </div>
+                                        </div>                                 
+                                    </div>
+                                    <div class='col-4'>
+                                        <img id='ufoIcon' width='70', height='70' atl='UFO ICON'>
+                                    </div>
+                                </div>
+                                <div id='event'>
+                                    <div class='horizontal-line'></div>
+                                    <p class='intro-title'> EVENT</p>
+                                    <div class='row'>
+                                    <div class='col-12 event-block'>
+                                        <div class='row'>
+                                            <div class='col-4'>
+                                                <p class='info'>TIME:</p>
+                                            </div>
+                                            <div class='col-8'>
+                                                <p class='attr' id='ufoTime'></p>
+                                            </div>
+                                        </div>
+                                        <div class='row'>
+                                            <div class='col-4'>
+                                                <p class='info'>LOCAITON:</p>
+                                            </div>
+                                            <div class='col-8'>
+                                                <p class='attr' id='ufoLocation'></p>
+                                            </div>
+                                        </div>
+                                        <div class='row'>
+                                            <div class='col-4'>
+                                                <p class='info'>DETAIL:</p>
+                                            </div>
+                                            <div class='col-8'>
+                                                <p class='attr' id='ufoDetail'></p>
+                                            </div>
+                                        </div> 
+                                    </div>                              
+                                    </div>
+
+
+                                </div>
+
+                            </div>                        
+                        </div>
+
+                        
                     </div>
                 </div>
             </div>

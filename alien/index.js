@@ -66,12 +66,20 @@ var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
 // scroll sections below
 var heatTip = d3.tip().attr('class', 'd3-tip heat-tip')
     .html(function(d) {
-        var s = '';
+        var s = '<p class="tip">' + months[d.colors['month'] - 1] + ' ' 
+            + d.colors['day'] + '</p>';
+        var cnt = 0;
+        var span = '';
         for (var k in d.colors) {
             if (k == 'day' || k == 'month') {
                 continue;
             }
-            s += '<p class="tip">' + k + ': ' + d.colors[k] + '</p>'
+            span += (span == '' ? '' : ' ') + '<span>' + k +': ' + d.colors[k] + '</span>';
+            cnt++;
+            if (cnt != 0 && cnt % 2 == 0) {
+                s += '<p class="tip">' + span + '</p>'
+                span = '';
+            }
         }
         return s;
     });
@@ -176,7 +184,6 @@ var shapeTransform = {
     "sphere": 'circle',
     'flash':'light'
 }
-
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 var days = d3.range(1, 32);
 
@@ -200,14 +207,21 @@ var nodeTitleColorMapping = {
     'silver': 'white',
     'black': 'white'
 }
-var endColorGradient = {
-    
-}
 var stackUpdated;
 var heatAndMapUpdated;
 var sankeyUpdated;
-var selectedColor = 'all';
-
+var selectedState = 'all';
+var selectedColorGroup = {
+    'black': false,
+    'red': false,
+    'yellow': false,
+    'green': false,
+    'blue': false,
+    'white': false,
+    'orange': false,
+    'silver': false,
+    'showAll': true
+}
 var validate = function(data) {
     if (data.country != 'us') {
         return false;
@@ -235,6 +249,18 @@ function preLoad() {
             images[url].src = url;
         }
     }
+}
+
+var checkShowAll = function() {
+    for (var k in selectedColorGroup) {
+        if (k == 'showAll') {
+            continue;
+        }
+        if (selectedColorGroup[k]) {
+            return false;
+        }
+    }
+    return true;
 }
 
 d3.queue()
@@ -354,6 +380,17 @@ var initFilterBar = function() {
         .attr('class', 'inner filter-color')
         .attr('transform', 'translate(' + filterColorpadding.l + ',' + filterColorpadding.t + ')');
 
+    var filterColorTitle = filterSVG.append('g')
+        .attr('class', 'title-group')
+        .attr('transform', 'translate(' + (filterColorpadding.l + filterColorInnerWidth / 2) 
+            + ',' + filterColorpadding.t + ')');
+
+    filterColorTitle.append('g')
+        .append('text')
+        .attr('text-anchor', 'middle')
+        .text('COLOR')
+        .style('fill', 'white');
+
     var colorxScale = d3.scaleLinear()
         .domain([1, 8])
         .range([0, filterColorInnerWidth]);
@@ -383,22 +420,12 @@ var initFilterBar = function() {
             d3.select(this).style('cursor', 'pointer');
         })
         .on('click', function(d) {
-            if (selectedColor == 'all') {
-                selectedColor = d.color;
-                d3.select(this).style('stroke', d => d.color == 'white' ? 'black': 'white');
-                d3.select(this).style('stroke-width', 3);
-            } else if (selectedColor == d.color) {
-                filterColor.select('.' + selectedColor + '-btn').style('stroke', '');
-                filterColor.select('.' + selectedColor + '-btn').style('stroke-width', 0);
-                selectedColor = 'all';
-            } else {
-                filterColor.select('.' + selectedColor + '-btn').style('stroke', '');
-                filterColor.select('.' + selectedColor + '-btn').style('stroke-width', 0);
-                selectedColor = d.color;
-                d3.select(this).style('stroke', 'white');
-                d3.select(this).style('stroke-width', 3);
-            }
-            updateSankeyColor(selectedColor);
+            selectedColorGroup[d.color] = !selectedColorGroup[d.color];
+            selectedColorGroup['showAll'] = checkShowAll();
+            d3.select(this).style('stroke', selectedColorGroup[d.color] 
+                ? (d.color == 'white' ? 'red': 'white') : '');
+            d3.select(this).style('stroke-width', selectedColorGroup[d.color] ? 3 : '');
+            updateSankeyColor();
             updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
         });
     
@@ -510,6 +537,16 @@ var initMap = function(states) {
         .style('fill', '#213952')
         .style('stroke', 'white')
         .style('stroke-width', 0.5)
+        .on('click', function(d) {
+            var stateShort = stateMapping[d.properties.NAME].toLowerCase();
+            if (selectedState == stateShort) {
+                selectedState = 'all';
+            } else {
+                selectedState = stateShort;
+            }
+            updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
+            updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
+        })
     
     var mapTitles = mapSVG.append('g')
         .attr('class', 'title-group')
@@ -580,7 +617,8 @@ var drawMap = function(points) {
     function getDurationFormat(duration) {
         var minute = Math.round(duration / 60);
         var seconds = duration % 60;
-        return minute > 0 ? minute + ' m' : seconds + ' s'
+        //return minute > 0 ? `${minute} mins` : `${seconds} sec`;
+        return minute > 0 ? minute + 'mins' : seconds + 'sec'
     }
 
     function getComments(comments) {
@@ -662,7 +700,7 @@ var initStack = function() {
         .attr('text-anchor', 'middle')
         .text('Drag tbe timeline and select a state to observe trends over years');
 
-    var yearAxisStart = 300;
+    var yearAxisStart = 0;
     var x = d3.scaleLinear()
         .domain([1940, 2014])
         .range([yearAxisStart, stackInnerWidth]);
@@ -713,7 +751,7 @@ var initStack = function() {
         .attr('transform', 'translate(' + stackpadding.l + ',' + 220 + ')');
 
     slider.append('text')
-        .attr('transform', 'translate(' + 200 + ',10)')
+        .attr('transform', 'translate(-30, -30)')
         .text('YEAR')
         .attr('fill', 'white');
 
@@ -834,7 +872,7 @@ var drawStack = function(colorData) {
         });
         return d3.sum(vals);
     });
-    var yearAxisStart = 300;
+    var yearAxisStart = 0;
     var filterScale = d3.scaleLinear()
         .domain([1940, 2014])
         .range([yearAxisStart, stackInnerWidth]);
@@ -1224,7 +1262,7 @@ var drawSankey = function(graph) {
         }
     })
     var colorCount = {};
-    keys.forEach(d => colorCount[d] = {'totalCount': 0});
+    keys.forEach(d => colorCount[d] = {});
     durations.forEach(d => {
         if (d.color in colorCount) {
             if (d.duration in colorCount[d.color]) {
@@ -1232,18 +1270,17 @@ var drawSankey = function(graph) {
             } else {
                 colorCount[d.color][d.duration] = 1;
             }
-            colorCount[d.color]['totalCount']++;
         }
     });
     var totalCount = durations.length;
-    barData = [];
+    var barData = [];
     for (var color in colorCount) {
         for (var duration in colorCount[color]) {
-            if (duration == 'totalCount') {
+            if (isNaN(duration / 60)) {
                 continue;
             }
             barData.push({
-                'duration': +duration / 60,
+                'duration': duration / 60,
                 'color': color,
                 //'colorScale': +colorCount[color][duration] * 20.0 / colorCount[color]['totalCount']
                 'colorScale': +colorCount[color][duration] * 40 / totalCount
@@ -1251,7 +1288,6 @@ var drawSankey = function(graph) {
         }
     }
     var barHeights = getNodePosition(graph.nodes);
-
     var xScale = d3.scaleLinear()
         .domain(d3.extent(barData, d => d.duration))
         .range([0, durationInnerWidth]);
@@ -1268,7 +1304,7 @@ var drawSankey = function(graph) {
         .append('rect')
         .attr('class', 'color-bar')
         .merge(durationBar)
-        .attr('x', d => xScale(d.duration))
+        .attr('x', (d, i) => {return xScale(d.duration)})
         .attr('y', d => barHeights[d.color].y)
         .attr('width', 2)
         .attr('height', d => barHeights[d.color].height)
@@ -1283,7 +1319,7 @@ var drawSankey = function(graph) {
 
     graph.links.sort((a, b) => b.color.localeCompare(a.color));
 
-    console.log(graph.links);
+    //console.log(graph.links);
 
     var linksTemp = sanekyInner.select('.link-group')
         .selectAll('.link')
@@ -1346,7 +1382,12 @@ var yearFilter = function(d, start, end) {
 }
 
 var colorFilter = function(d) {
-    return selectedColor == 'all' || d.color == selectedColor;
+    return selectedColorGroup['showAll'] || selectedColorGroup[d.color];
+    //return selectedColor == 'all' || d.color == selectedColor;
+}
+
+var stateFilter = function(d) {
+    return selectedState == 'all' || d.state == selectedState;
 }
 
 var stackYearFilter = function(start, end) {
@@ -1355,10 +1396,11 @@ var stackYearFilter = function(start, end) {
 }
 
 var updateHeatAndMap = function(start, end) {
-    heatAndMapUpdated = events.filter(d => (yearFilter(d, start, end)) && colorFilter(d));
+    heatAndMapUpdated = events.filter(d => (yearFilter(d, start, end) && colorFilter(d) && stateFilter(d)));
     drawHeat(processHeatData(heatAndMapUpdated));
     drawMap(heatAndMapUpdated);
     brush.move(d3.select(brushcell), null);
+    d3.select('#maptoolTip').classed('hidden', true);
 }
 
 var getNodePosition = function(nodes) {
@@ -1385,34 +1427,35 @@ function dragended(d) {
 }
 
 var updateSankey = function(start, end) {
-    sankeyUpdated = events.filter(d => (yearFilter(d, start, end)));
+    sankeyUpdated = events.filter(d => (yearFilter(d, start, end) && stateFilter(d)));
     drawSankey(processSankeyData(sankeyUpdated));
-    updateSankeyColor(selectedColor);
+    updateSankeyColor();
 }
 
-var updateSankeyColor = function(color) {
+var updateSankeyColor = function() {
     sankeySVG.select('.sankey-inner')
         .select('.node-group')
         .selectAll('.node')
         .style('fill-opacity', d => {
             if (d.name in colorMapping) {
-                return (color == 'all' || d.name == color) ? 1 : 0.2;
+                return (selectedColorGroup['showAll'] || selectedColorGroup[d.name]) ? 1 : 0.2;
             }
             return '';
         })
         .style('stroke', d => {
-            return (color == 'all' || d.name == color) ? 
+            return (selectedColorGroup['showAll'] || selectedColorGroup[d.name]) ? 
                 (d.name == 'black' || (!(d.name in colorMapping)) ? '#969696' : colorMapping[d.name]) : '';
         })
 
     sankeySVG.select('.sankey-inner')
         .select('.link-group')
         .selectAll('.link')
-        .style('stroke-opacity', d => (color == 'all' || d.color == color) ? 0.8 : 0.2);
+        .style('stroke-opacity', d => (selectedColorGroup['showAll'] || selectedColorGroup[d.color]) ? 0.8 : 0.2);
 
     sankeySVG.select('.duration-inner')
         .selectAll('.color-bar')
-        .style('fill-opacity', d => (color == 'all' || d.color == color) ? d.colorScale : d.colorScale * 0.1);
+        .style('fill-opacity', d => (selectedColorGroup['showAll'] || selectedColorGroup[d.color]) 
+            ? d.colorScale : d.colorScale * 0.1);
 }
 
 function brushstart() {
@@ -1467,7 +1510,9 @@ function brushend() {
         return;
     }
     brushcell = this;
-
 }
 
+function hideMapTip() {
+    d3.select('#maptoolTip').classed('hidden', true)
+}
 

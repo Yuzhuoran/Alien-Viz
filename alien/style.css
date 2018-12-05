@@ -93,9 +93,10 @@ div.horizontal-line {
     position: relative;
 }
 
-#filterBar {
+#filterSVG {
     position:sticky;
     top: 0px;
+    z-index: 5;
 }
 
 .axis-title {
@@ -122,16 +123,17 @@ div.horizontal-line {
     visibility: hidden
 }
 
-.black-link {
-    paint-order: stroke fill;
-    stroke-width: 1.8;
-    stroke: black;
-    fill: 'white';
-}
-
 .tip {
     font-size: 12px;
 }
 
+svg {
+    display: block;
+    margin: auto;
+}
+
+#mapGroup {
+    display: block;
+}
 
 
