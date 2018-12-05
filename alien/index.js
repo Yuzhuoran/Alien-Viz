@@ -84,6 +84,26 @@ var heatTip = d3.tip().attr('class', 'd3-tip heat-tip')
         return s;
     });
 
+var stateTip = d3.tip().attr('class', 'd3-tip state-tip')
+    .html(function(d) {
+        var colors = d.properties.colors;
+        var span = '';
+        var s = '<p class="tip">' + d.properties.NAME  + '</p>';
+        var cnt = 0;
+        for (var k in colors) {
+            if (k == 'day' || k == 'month') {
+                continue;
+            }
+            span += (span == '' ? '' : ' ') + '<span>' + k +': ' + colors[k] + '</span>';
+            cnt++;
+            if (cnt != 0 && cnt % 2 == 0) {
+                s += '<p class="tip">' + span + '</p>'
+                span = '';
+            }
+        }
+        return s;
+    });
+
 
 var brushcell = 'undefined';
 var brush = d3.brush()
@@ -102,6 +122,69 @@ var HeatCell = function(colors) {
     }
 }
 
+var stateShort2Full = 
+{
+    "AL": "Alabama",
+    "AK": "Alaska",
+    "AS": "American Samoa",
+    "AZ": "Arizona",
+    "AR": "Arkansas",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DE": "Delaware",
+    "DC": "District of Columbia",
+    "FM": "Federated States of Micronesia",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "GU": "Guam",
+    "HI": "Hawaii",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "IA": "Iowa",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Louisiana",
+    "ME": "Maine",
+    "MH": "Marshall Islands",
+    "MD": "Maryland",
+    "MA": "Massachusetts",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MS": "Mississippi",
+    "MO": "Missouri",
+    "MT": "Montana",
+    "NE": "Nebraska",
+    "NV": "Nevada",
+    "NH": "New Hampshire",
+    "NJ": "New Jersey",
+    "NM": "New Mexico",
+    "NY": "New York",
+    "NC": "North Carolina",
+    "ND": "North Dakota",
+    "MP": "Northern Mariana Islands",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregon",
+    "PW": "Palau",
+    "PA": "Pennsylvania",
+    "PR": "Puerto Rico",
+    "RI": "Rhode Island",
+    "SC": "South Carolina",
+    "SD": "South Dakota",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UT": "Utah",
+    "VT": "Vermont",
+    "VI": "Virgin Islands",
+    "VA": "Virginia",
+    "WA": "Washington",
+    "WV": "West Virginia",
+    "WI": "Wisconsin",
+    "WY": "Wyoming"
+}
+
 var stateMapping =
 {
     'Alabama': 'AL',
@@ -113,8 +196,8 @@ var stateMapping =
     'Colorado': 'CO',
     'Connecticut': 'CT',
     'Delaware': 'DE',
-    'District Of Columbia': 'DC',
-    'Federated States Of Micronesia': 'FM',
+    'District of Columbia': 'DC',
+    'Federated States of Micronesia': 'FM',
     'Florida': 'FL',
     'Georgia': 'GA',
     'Guam': 'GU',
@@ -207,7 +290,9 @@ var nodeTitleColorMapping = {
     'silver': 'white',
     'black': 'white'
 }
+
 var stackUpdated;
+var stateData;
 var heatAndMapUpdated;
 var sankeyUpdated;
 var selectedState = 'all';
@@ -298,6 +383,7 @@ function readyToDraw(error, dataset, states) {
     stackUpdated = events;
     heatAndMapUpdated = events;
     sankeyUpdated = events;
+    stateData = states;
 
     initStack();
     stackYearFilter(1940, 2014);
@@ -518,6 +604,74 @@ var initFilterBar = function() {
     }
 }
 
+var getStateColorCount = function() {
+    var stateCount = {};
+    var keys = ['black', 'silver', 'white','blue', 'green', 'yellow', 'orange', 'red'];
+    for (var k in stateShort2Full) {
+        stateCount[k.toLocaleLowerCase()] = {};
+        keys.forEach(d => stateCount[k.toLocaleLowerCase()][d] = 0)
+    }
+    
+    heatAndMapUpdated.forEach((d) => {
+        if (d.state in stateCount && d.color in stateCount[d.state]) {
+            stateCount[d.state][d.color]++;
+        } 
+    });
+
+    stateData.features.forEach(d => {
+        d.properties['colors'] = stateCount[stateMapping[d.properties.NAME].toLowerCase()]
+    })
+    
+    //console.log(stateData.features);
+}
+
+var updateState = function() {
+
+    getStateColorCount();
+
+    var path2 = d3.geoPath()
+        .projection(d3.geoAlbersUsa())
+
+    var mapInner = mapSVG.select('.map-inner');
+    
+    var statePath = mapInner.selectAll('.state-path')
+        .data(stateData.features, function(d) {
+            return d.properties.NAME;
+        });
+    
+    statePath.enter()
+        .append('path')
+        .attr('class', 'state-path')
+        .merge(statePath)
+        .attr('d', path2)
+        .style('fill', '#213952')
+        .style('stroke', 'white')
+        .style('stroke-width', 0.5)
+        .on('click', function(d) {
+            var stateShort = stateMapping[d.properties.NAME].toLowerCase();
+            if (selectedState == stateShort) {
+                selectedState = 'all';
+            } else {
+                selectedState = stateShort;
+            }
+            updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
+            updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
+        })
+        .on('mouseover', function(d) {
+            d3.select(this).style('fill-opacity', 0.5);
+            console.log(d.properties.colors);
+        })
+        .on('mouseout', function(d) {
+            d3.select(this).style('fill-opacity', 1);
+
+        })
+        .on('mouseover', stateTip.show)
+        .on('mouseout',  stateTip.hide)
+
+    statePath.exit().remove();
+        
+}
+
 var initMap = function(states) {
     var projection = d3.geoAlbersUsa();
 
@@ -528,7 +682,10 @@ var initMap = function(states) {
         .attr('class', 'map-inner')
         .attr('transform', 'translate(' + mappadding.l + ',' + mappadding.t + ')');
 
+    mapInner.call(stateTip);
+    updateState();
 
+    /*
     mapInner.selectAll('path')
         .data(states.features)
         .enter()
@@ -553,6 +710,7 @@ var initMap = function(states) {
         .on('mouseout', function(d) {
             d3.select(this).style('fill-opacity', 1);
         });
+    */
     
     var mapTitles = mapSVG.append('g')
         .attr('class', 'title-group')
@@ -1262,6 +1420,7 @@ var drawSankey = function(graph) {
     
     //var keys = ['white', 'red', 'yellow','black', 'silver','blue', 'green', 'orange'];
     var keys = [];
+
     graph.nodes.forEach(d => {
         if (d.name in colorMapping) {
             keys.push(d.name);
@@ -1407,6 +1566,7 @@ var stackYearFilter = function(start, end) {
 var updateHeatAndMap = function(start, end) {
     heatAndMapUpdated = events.filter(d => (yearFilter(d, start, end) && colorFilter(d) && stateFilter(d)));
     drawHeat(processHeatData(heatAndMapUpdated));
+    updateState();
     drawMap(heatAndMapUpdated);
     brush.move(d3.select(brushcell), null);
     d3.select('#maptoolTip').classed('hidden', true);
