@@ -547,6 +547,12 @@ var initMap = function(states) {
             updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
             updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
         })
+        .on('mouseover', function(d) {
+            d3.select(this).style('fill-opacity', 0.5);
+        })
+        .on('mouseout', function(d) {
+            d3.select(this).style('fill-opacity', 1);
+        });
     
     var mapTitles = mapSVG.append('g')
         .attr('class', 'title-group')
@@ -1309,7 +1315,10 @@ var drawSankey = function(graph) {
         .attr('width', 2)
         .attr('height', d => barHeights[d.color].height)
         .style('fill', d => colorMapping[d.color])
-        .style('fill-opacity', d => d.colorScale);
+        .style('fill-opacity', d => d.colorScale)
+        .style('stroke', d => d.color == 'black' ? '#969696' :'')
+        .style('stroke-width', d => d.color == 'black' ? 0.5: '')
+        .style('stroke-opacity', d => d.color == 'black' ? d.colorScale * 5: '')
 
     durationBar.exit().remove();
 
