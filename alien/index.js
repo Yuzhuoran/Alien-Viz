@@ -152,8 +152,6 @@ var HeatCell = function(colors) {
 
 }
 
-
-
 var stateShort2Full = 
 {
     "AL": "Alabama",
@@ -324,10 +322,12 @@ var nodeTitleColorMapping = {
 }
 
 var stackUpdated;
+var opacityUpdated;
 var stateData;
 var heatAndMapUpdated;
 var sankeyUpdated;
 var selectedState = 'all';
+var opacityProcessedData;
 var selectedColorGroup = {
     'black': false,
     'red': false,
@@ -416,7 +416,9 @@ function readyToDraw(error, dataset, states) {
     heatAndMapUpdated = events;
     sankeyUpdated = events;
     stateData = states;
+    opacityUpdated = events;
 
+    updateOpacityScale();
     initStack();
     stackYearFilter(1940, 2014);
     initFilterBar();
@@ -428,6 +430,10 @@ function readyToDraw(error, dataset, states) {
     initSankey();
     drawSankey(processSankeyData(sankeyUpdated));
     console.log(events.length);
+}
+
+var updateOpacityScale = function() {
+    opacityProcessedData = processHeatData(opacityUpdated);
 }
 
 var initFilterBar = function() {
@@ -1160,7 +1166,6 @@ var processHeatData = function(data) {
 }
 
 
-
 var drawHeat = function(heatData) {
     var heatxScale = d3.scaleLinear()
         .domain([1, 32])
@@ -1169,7 +1174,8 @@ var drawHeat = function(heatData) {
     var heatyScale = d3.scaleLinear()
         .domain([1, 12])
         .range([0, heatInnerHeight]);
-    var heatMaxColor = d3.max(heatData, (d) => {
+    
+    var heatMaxColor = d3.max(opacityProcessedData, (d) => {
             var vals = d3.keys(d).map((key) => {
                 if (key == 'month' || key == 'day' || key == 'key') {
                     return 0;
@@ -1648,6 +1654,14 @@ var updateHeatAndMap = function(start, end) {
         && stateFilter(d) 
         && brushFilter(d));
     drawHeat(processHeatData(heatAndMapUpdated));
+    opacityUpdated = events.filter(d => 
+        yearFilter(d, start, end) 
+        && colorFilter(d) 
+        && stateFilter(d));
+    
+    updateOpacityScale();
+    drawHeat(processHeatData(heatAndMapUpdated));
+
     getStateColorCount();
     updateState();
     drawMap(heatAndMapUpdated);
