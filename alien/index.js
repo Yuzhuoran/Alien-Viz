@@ -70,10 +70,12 @@ var heatTip = d3.tip().attr('class', 'd3-tip heat-tip')
             + d.colors['day'] + '</p>';
         var cnt = 0;
         var wrapper = s + '<div class="row"><div class="col-6 tip-col">'
+        var total = 0;
         for (var k in d.colors) {
             if (k == 'day' || k == 'month') {
                 continue;
             }
+            total += d.colors[k];
             cnt++;
             wrapper += '<p class="tip">' + k +': ' + d.colors[k] + '</p>';
             if (cnt == 4) {
@@ -132,16 +134,25 @@ var brush = d3.brush()
     .on('start', brushstart)
     .on('brush', brushmove)
     .on('end', brushend);
-var HeatCell = function(colors) {
-    this.colors = colors;
-    this.getKey = function() {
+
+var getKeyFun = function(data) {
         var key = '';
-        for (var k in colors) {
-            key += k + '-' + colors[k];
+        for (var k in data) {
+            key += k + '-' + data[k];
+        }
+        for (var k in selectedColorGroup) {
+            key += k + '-' + selectedColorGroup[k] ? 'true':'false';
         }
         return key;
-    }
 }
+
+var HeatCell = function(colors) {
+    this.colors = colors;
+    this.getKey = getKeyFun;
+
+}
+
+
 
 var stateShort2Full = 
 {
@@ -1137,6 +1148,7 @@ var processHeatData = function(data) {
         var item = {
             'month': +month,
             'day': +day
+            //'key': 'month-' + month + '-day-' + day
         }
         for (var v in heatData[key]) {
             // filter color, if not selected set the value to be zero
@@ -1150,7 +1162,6 @@ var processHeatData = function(data) {
 
 
 var drawHeat = function(heatData) {
-
     var heatxScale = d3.scaleLinear()
         .domain([1, 32])
         .range([0, heatInnerWidth]);
@@ -1158,11 +1169,25 @@ var drawHeat = function(heatData) {
     var heatyScale = d3.scaleLinear()
         .domain([1, 12])
         .range([0, heatInnerHeight]);
+    var heatMaxColor = d3.max(heatData, (d) => {
+            var vals = d3.keys(d).map((key) => {
+                if (key == 'month' || key == 'day' || key == 'key') {
+                    return 0;
+                }
+                return d[key];
+            });
+            //console.log(vals);
+            return d3.max(vals);
+        });
 
-    HeatCell.prototype.update2 = function(g) {
+
+    var opacityScale = d3.scaleLinear().domain([0, heatMaxColor])
+
+    HeatCell.prototype.update2 = function(g, data) {
         // get the x, y
+        //console.log(data);
 
-        var _this = this;
+        var _this = data;
         var y = heatyScale(+_this.colors.month) + heatMapHeight / 2;
         var x = heatxScale(+_this.colors.day) + heatMapWidth / 2;
         
@@ -1185,7 +1210,7 @@ var drawHeat = function(heatData) {
         }
         var items = [];
         for(var key in _this.colors) {
-            if (key == 'month' || key == 'day') {
+            if (key == 'month' || key == 'day' || key == 'key') {
                 continue;
             }
             items.push({'color':key, 'value': _this.colors[key]})
@@ -1201,7 +1226,7 @@ var drawHeat = function(heatData) {
             .attr('transform', 'translate(' + x + ',' + y +')');
 
         var rects = smallCells.selectAll('.color-cell')
-            .data(items, d => d);
+            .data(items, d => getKeyFun(d));
 
         var rectsEnter = rects.enter()
             .append('rect')
@@ -1210,6 +1235,7 @@ var drawHeat = function(heatData) {
         rectsEnter.merge(rects)
             .attr('x', d => xScale(d.x))
             .attr('y', d => yScale(d.y))
+            .attr('value', d => d.value)
             .attr('width', cellWidth)
             .attr('height', cellHeight)
             .style('fill', d => colorMapping[d.color])
@@ -1219,21 +1245,11 @@ var drawHeat = function(heatData) {
         
         rects.exit().remove();
     }
-    var heatMaxColor = d3.max(heatData, (d) => {
-        var vals = d3.keys(d).map((key) => {
-            if (key == 'month' || key == 'day') {
-                return 0;
-            }
-            return d[key];
-        });
-        //console.log(vals);
-        return d3.max(vals);
-    });
-    var opacityScale = d3.scaleLinear().domain([0, heatMaxColor])
+
 
     var cells = [];
     heatData.forEach(d => cells.push(new HeatCell(d)));
-
+    //console.log(cells);
     var heatInner = heatSVG.select('.heat-inner');
 
     heatInner.call(heatTip)
@@ -1253,7 +1269,7 @@ var drawHeat = function(heatData) {
     bigCellEnter.merge(bigCell);
 
     bigCellEnter.each(function(cell) {
-            cell.update2(this);
+            cell.update2(this, cell);
     });
 
     bigCell.exit().remove();
@@ -1635,6 +1651,7 @@ var updateHeatAndMap = function(start, end) {
     getStateColorCount();
     updateState();
     drawMap(heatAndMapUpdated);
+    console.log('update heat map and map!')
     //brush.move(d3.select(brushcell), null);
     //var e = heatSVG.select('.heat-inner').select('.brush').select('.selection')
     //console.log(d3.brushSelection(brush));
@@ -1703,10 +1720,10 @@ var updateSankeyColor = function() {
 function brushstart() {
     brushRect.showAll = true;
     console.log('start ' + brushRect.showAll);
-    getStateColorCount();
-    updateState();
+
     updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
     updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
+
     var mapInner = mapSVG.select('.map-inner');
     var inner = heatSVG.select('.heat-inner');
     inner.selectAll('.big-cell')
@@ -1774,8 +1791,9 @@ function brushend() {
         'py1': py1,
         'py2': py2,
     }
-    console.log(brushRect)
     brushRect.showAll = false;
+    console.log(brushRect.data)
+    console.log(brushRect.showAll)
     getStateColorCount();
     updateState();
     updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
