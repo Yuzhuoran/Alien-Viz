@@ -13,7 +13,7 @@ var sankeySVGHeigth = +sankeySVG.attr('height');
 var mapSVG = d3.select('#mapSVG');
 var mapSVGWidth = +mapSVG.attr('width');
 var mapSVGHeight = +mapSVG.attr('height');
-var mappadding = {t: 120, l: 131, r: 0, b: 180}
+var mappadding = {t: 200, l: 131, r: 0, b: 180}
 
 var mapInnerWidth = mapSVGWidth - mappadding.l - mappadding.r;
 var mapInnerHeight = mapSVGHeight - mappadding.t - mappadding.b;
@@ -69,20 +69,19 @@ var heatTip = d3.tip().attr('class', 'd3-tip heat-tip')
         var s = '<p class="tip">' + months[d.colors['month'] - 1] + ' ' 
             + d.colors['day'] + '</p>';
         var cnt = 0;
-        var span = '';
+        var wrapper = s + '<div class="row"><div class="col-6 tip-col">'
         for (var k in d.colors) {
             if (k == 'day' || k == 'month') {
                 continue;
             }
-            span += (span == '' ? '' : ' ') + '<span>' + k +': ' + d.colors[k] + '</span>';
             cnt++;
-            if (cnt != 0 && cnt % 2 == 0) {
-                s += '<p class="tip">' + span + '</p>'
-                span = '';
+            wrapper += '<p class="tip">' + k +': ' + d.colors[k] + '</p>';
+            if (cnt == 4) {
+                wrapper += '</div><div class="col-6 tip-col">'
             }
         }
-        
-        return s;
+        wrapper += '</div></div>';
+        return wrapper;
     });
 
 var stateTip = d3.tip().attr('class', 'd3-tip state-tip')
@@ -91,18 +90,19 @@ var stateTip = d3.tip().attr('class', 'd3-tip state-tip')
         var span = '';
         var s = '<p class="tip">' + d.properties.NAME  + '</p>';
         var cnt = 0;
+        var wrapper = s + '<div class="row"><div class="col-6 tip-col">'
         for (var k in colors) {
             if (k == 'day' || k == 'month') {
                 continue;
             }
-            span += (span == '' ? '' : ' ') + '<span>' + k +': ' + colors[k] + '</span>';
             cnt++;
-            if (cnt != 0 && cnt % 2 == 0) {
-                s += '<p class="tip">' + span + '</p>'
-                span = '';
+            wrapper += '<p class="tip">' + k +': ' + colors[k] + '</p>';
+            if (cnt == 4) {
+                wrapper += '</div><div class="col-6 tip-col">'
             }
         }
-        return s;
+        wrapper += '</div></div>';
+        return wrapper;
     });
 
 var barTip = d3.tip().attr('class', 'd3-tip bar-tip')
@@ -627,7 +627,7 @@ var initFilterBar = function() {
     }
 }
 
-var getStateColorCount = function(brushFilter) {
+var getStateColorCount = function() {
     var stateCount = {};
     var keys = ['black', 'silver', 'white','blue', 'green', 'yellow', 'orange', 'red'];
     for (var k in stateShort2Full) {
@@ -676,16 +676,21 @@ var updateState = function() {
             } else {
                 selectedState = stateShort;
             }
-            updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), d => true);
+            updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
             updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
         })
         .on('mouseover', function(d) {
             d3.select(this).style('fill-opacity', 0.5);
-            stateTip.show(d, this);
+            if (selectedState == 'all' || selectedState == stateMapping[d.properties.NAME].toLowerCase()) {
+                stateTip.show(d, this);
+            }
+            
         })
         .on('mouseout', function(d) {
             d3.select(this).style('fill-opacity', 1);
-            stateTip.hide(d, this);
+            if (selectedState == 'all' || selectedState == stateMapping[d.properties.NAME].toLowerCase()) {
+                stateTip.hide(d, this);
+            }
 
         })
 
@@ -704,12 +709,12 @@ var initMap = function(states) {
         .attr('transform', 'translate(' + mappadding.l + ',' + mappadding.t + ')');
 
     mapInner.call(stateTip);
-    getStateColorCount(d => true);
+    getStateColorCount();
     updateState();
     
     var mapTitles = mapSVG.append('g')
         .attr('class', 'title-group')
-        .attr('transform', 'translate(' + (mapSVGWidth / 1.6) + ', 40)')
+        .attr('transform', 'translate(' + (mapSVGWidth / 1.6) + ', 100)')
     
 
     mapTitles.append('g')
@@ -723,8 +728,14 @@ var initMap = function(states) {
         .append('text')
         .attr('y', 40)
         .attr('text-anchor', 'middle')
-        .text('Drag the timeline to filter the time')
-    
+        .text('Filter colors and years to observe patterns.') 
+
+    mapTitles.append('g')
+        .attr('class', 'description')
+        .append('text')
+        .attr('y', 65)
+        .attr('text-anchor', 'middle')
+        .text('Click a dot to see details. Click a state to filter, and scroll up to see the change.') 
 }
 var drawMap = function(points) {
     var projection = d3.geoAlbersUsa();
@@ -758,13 +769,18 @@ var drawMap = function(points) {
         })
         .on('click', function(d) {
             d3.select('#maptoolTip').classed('hidden', false)
-            d3.select('#ufoColor').text(d.color);
-            d3.select('#ufoShape').text(d.shape in shapeTransform ? shapeTransform[d.shape] : 'other');
+            d3.select('#ufoColor').text(d.color.charAt(0).toUpperCase() + d.color.slice(1));
+            d3.select('#ufoShape').text(d.shape in shapeTransform ? 
+                    shapeTransform[d.shape].charAt(0).toUpperCase() + shapeTransform[d.shape].slice(1): 'Other');
             d3.select('#ufoDuration').text(getDurationFormat(d.duration));
             d3.select('#ufoTime').text(d.date.toLocaleString());
             d3.select('#ufoLocation').text(d.city.charAt(0).toUpperCase() + d.city.slice(1));
             d3.select('#ufoDetail').text(getComments(d.comments));
-            var url = 'images/' + shapeTransform[d.shape] + '_' 
+            var shape = d.shape;
+            if (!(d.shape) in shapeTransform) {
+                shape = 'other'
+            }
+            var url = 'images/' + shapeTransform[shape] + '_' 
                 + (d.color == 'silver' ? 'gray' : d.color)+ '.png';
             if (url in images) {
                 d3.select('#ufoIcon').attr('src', url);
@@ -835,6 +851,13 @@ var initStack = function() {
         .append('text')
         .text('TIMES');
 
+    stackSVG.append('g')
+        .attr('class', 'axis-title')
+        .attr('transform', 'translate(' + (stackSVGWidth - stackpadding.r - 40) 
+            + ',' + (stackSVGheighth - stackpadding.b + 30) + ')')
+        .append('text')
+        .text('YEAR');
+
     var stackTitles = stackSVG.append('g')
         .attr('class', 'title-group')
         .attr('transform', 'translate(' + (stackSVGWidth / 2) + ', 40)')
@@ -851,7 +874,7 @@ var initStack = function() {
         .append('text')
         .attr('y', 40)
         .attr('text-anchor', 'middle')
-        .text('Drag tbe timeline and select a state to observe trends over years');
+        .text('Drag the timeline to observe trends over years');
 
     var yearAxisStart = 0;
     var x = d3.scaleLinear()
@@ -1005,9 +1028,17 @@ var initHeat = function() {
     heatTitles.append('g')
         .attr('class', 'description')
         .append('text')
-        .attr('y', 40)
         .attr('text-anchor', 'middle')
-        .text('Drag the timeline to filter the time');
+        .attr('y', 60)
+        .text('Drag-select to filter the dates, and scroll up and down to see the change.');
+
+    heatTitles.append('g')
+        .attr('class', 'description')
+        .append('text')
+        .attr('y', 35)
+        .attr('text-anchor', 'middle')
+        .text('Filter colors and years to observe patterns. ')
+            
     
     inner.append('g')
         .attr('class', 'brush')
@@ -1306,7 +1337,7 @@ var initSankey = function() {
         .append('text')
         .attr('y', 40)
         .attr('text-anchor', 'middle')
-        .text('Select a color to observe patterns')
+        .text('Filter colors and years to observe patterns')
         
     sanekyInner.append('g')
         .attr('stroke', '#000')
@@ -1336,20 +1367,21 @@ var initSankey = function() {
 
     durationInner.append('g')
         .attr('class', 'axis-title')
-        .attr('transform', 'translate(' + (durationInnerWidth + 20) + ',' + (durationInnerHeight + 25) + ')')
+        .attr('transform', 'translate(' + (durationInnerWidth - 20) + ',' + (durationInnerHeight + 40) + ')')
+        .attr('text-anchor', 'middle')
         .append('text')
-        .text('MINS');
+        .text('DURATION(mins)');
 
     sanekyInner.append('g')
         .attr('class', 'axis-title')
-        .attr('transform', 'translate(40, -25) rotate(180)')
+        .attr('transform', 'translate(40, -40) rotate(180)')
         .append('text')
         .attr('text-anchor', 'middle')
         .text('COLORS');
 
     sanekyInner.append('g')
         .attr('class', 'axis-title')
-        .attr('transform', 'translate(' + (sankeyInnerWidth + 10) + ',' + -20 + ') rotate(180)')
+        .attr('transform', 'translate(' + (sankeyInnerWidth - 35) + ',' + -20 + ') rotate(180)')
         .append('text')
         .attr('text-anchor', 'middle')
         .text('SHAPES');
@@ -1474,8 +1506,17 @@ var drawSankey = function(graph) {
         .style('stroke', d => d.color == 'black' ? '#969696' :'')
         .style('stroke-width', d => d.color == 'black' ? 0.5: '')
         .style('stroke-opacity', d => d.color == 'black' ? d.colorScale * 5: '')
-        .on('mouseover', barTip.show)
-        .on('mouseout', barTip.hide);
+        .on('mouseover', function(d) {
+            if (selectedColorGroup.showAll || selectedColorGroup[d.color]) {
+                barTip.show(d, this)
+            }
+            
+        })
+        .on('mouseout', function(d) {
+            if (selectedColorGroup.showAll || selectedColorGroup[d.color]) {
+                barTip.hide(d, this)
+            }
+        });
 
     durationBar.exit().remove();
 
@@ -1506,9 +1547,10 @@ var drawSankey = function(graph) {
                 .attr('cx', d3.event.offsetX)
                 .attr('cy', d3.event.offsetY - 5) // 5 pixels above the cursor
                 .node();
-            linkTip.show(d, target)
+            
             if (selectedColorGroup['showAll'] || selectedColorGroup[d.color]) {
                 d3.select(this).style('stroke-opacity', 0.4);
+                linkTip.show(d, target)
             }
         })
         .on('mouseout', function(d) {
@@ -1516,9 +1558,10 @@ var drawSankey = function(graph) {
                 .attr('cx', d3.event.offsetX)
                 .attr('cy', d3.event.offsetY - 5) // 5 pixels above the cursor
                 .node();
-            linkTip.hide(d, target);
+            
             if (selectedColorGroup['showAll'] || selectedColorGroup[d.color]) {
                 d3.select(this).style('stroke-opacity', 0.8);
+                linkTip.hide(d, target);
             }
             
         })
@@ -1583,9 +1626,13 @@ var stackYearFilter = function(start, end) {
 }
 
 var updateHeatAndMap = function(start, end) {
-    heatAndMapUpdated = events.filter(d => (yearFilter(d, start, end) && colorFilter(d) && stateFilter(d) && brushFilter(d)) );
+    heatAndMapUpdated = events.filter(d => 
+        yearFilter(d, start, end) 
+        && colorFilter(d) 
+        && stateFilter(d) 
+        && brushFilter(d));
     drawHeat(processHeatData(heatAndMapUpdated));
-    getStateColorCount((d) => true)
+    getStateColorCount();
     updateState();
     drawMap(heatAndMapUpdated);
     //brush.move(d3.select(brushcell), null);
@@ -1615,13 +1662,13 @@ function dragstarted(d) {
 function dragended(d) {
     // update sankey and heat?
     //console.log('year end!!! update')
-    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), d => true);
+    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
     updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
     d3.select(this).classed("active", false);
     d3.select(this).style('cursor', 'default');
 }
 
-var updateSankey = function(start, end, brushFilter) {
+var updateSankey = function(start, end) {
     sankeyUpdated = events.filter(d => (yearFilter(d, start, end) && stateFilter(d) && brushFilter(d)));
     drawSankey(processSankeyData(sankeyUpdated));
     updateSankeyColor();
@@ -1656,9 +1703,9 @@ var updateSankeyColor = function() {
 function brushstart() {
     brushRect.showAll = true;
     console.log('start ' + brushRect.showAll);
-    getStateColorCount((d) => true);
+    getStateColorCount();
     updateState();
-    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), d => true);
+    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
     updateHeatAndMap(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
     var mapInner = mapSVG.select('.map-inner');
     var inner = heatSVG.select('.heat-inner');
@@ -1729,9 +1776,9 @@ function brushend() {
     }
     console.log(brushRect)
     brushRect.showAll = false;
-    getStateColorCount(brushFilter);
+    getStateColorCount();
     updateState();
-    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'), brushFilter);
+    updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
 
 }
 
