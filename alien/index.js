@@ -1,5 +1,6 @@
 
 // node server
+/*
 var static = require('node-static');
 var file = new static.Server();
 require('http').createServer(function(request, response) {
@@ -8,6 +9,7 @@ require('http').createServer(function(request, response) {
   }).resume();
 }).listen(process.env.PORT || 3000);
 
+*/
 
 
 var stackSVG = d3.select('#stackSVG');
@@ -71,7 +73,7 @@ var cellHeight = (heatMapHeight)/ 2.0;
 
 var mapCellpadding = 1;
 
-var stackpadding = {t: 300, l:151, r:151, b:151}
+var stackpadding = {t: 150, l:151, r:151, b:151}
 var stackInnerHeight = stackSVGheighth - stackpadding.t - stackpadding.b;
 var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
 
@@ -961,7 +963,7 @@ var initStack = function() {
 
     var slider = stackSVG.append('g')
         .attr('class', 'slider')
-        .attr('transform', 'translate(' + stackpadding.l + ',' + 220 + ')');
+        .attr('transform', 'translate(' + stackpadding.l + ',' + 170 + ')');
 
     slider.append('text')
         .attr('transform', 'translate(-30, -30)')
