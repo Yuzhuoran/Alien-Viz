@@ -73,7 +73,7 @@ var cellHeight = (heatMapHeight)/ 2.0;
 
 var mapCellpadding = 1;
 
-var stackpadding = {t: 150, l:151, r:151, b:151}
+var stackpadding = {t: 220, l:151, r:151, b:151}
 var stackInnerHeight = stackSVGheighth - stackpadding.t - stackpadding.b;
 var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
 
@@ -963,7 +963,7 @@ var initStack = function() {
 
     var slider = stackSVG.append('g')
         .attr('class', 'slider')
-        .attr('transform', 'translate(' + stackpadding.l + ',' + 170 + ')');
+        .attr('transform', 'translate(' + stackpadding.l + ',' + 150 + ')');
 
     slider.append('text')
         .attr('transform', 'translate(-30, -30)')
@@ -1447,7 +1447,7 @@ var initSankey = function() {
 
     var sankeyTitles = sankeySVG.append('g')
         .attr('class', 'title-group')
-        .attr('transform', 'translate(' + sankeySVGWidth / 2 + ', 50)')
+        .attr('transform', 'translate(' + sankeySVGWidth / 2 + ', 70)')
     
     sankeyTitles.append('g')
         .attr('class', 'title')
