@@ -66,18 +66,14 @@ var stackInnerWidth = stackSVGWidth - stackpadding.l - stackpadding.r;
 // scroll sections below
 var heatTip = d3.tip().attr('class', 'd3-tip heat-tip')
     .html(function(d) {
-        var s = '<p class="tip">' + months[d.colors['month'] - 1] + ' ' 
-            + d.colors['day'] + '</p>';
+        var items = d.items;
+        var s = '<p class="tip">' + months[[d.month] - 1] + ' ' 
+            + d.day + '</p>';
         var cnt = 0;
         var wrapper = s + '<div class="row"><div class="col-6 tip-col">'
-        var total = 0;
-        for (var k in d.colors) {
-            if (k == 'day' || k == 'month') {
-                continue;
-            }
-            total += d.colors[k];
+        for (var i = 0; i < items.length; i++) {
             cnt++;
-            wrapper += '<p class="tip">' + k +': ' + d.colors[k] + '</p>';
+            wrapper += '<p class="tip">' + items[i].color +': ' + items[i].value + '</p>';
             if (cnt == 4) {
                 wrapper += '</div><div class="col-6 tip-col">'
             }
@@ -140,9 +136,11 @@ var getKeyFun = function(data) {
         for (var k in data) {
             key += k + '-' + data[k];
         }
+        /*
         for (var k in selectedColorGroup) {
             key += k + '-' + selectedColorGroup[k] ? 'true':'false';
         }
+        */
         return key;
 }
 
@@ -1232,7 +1230,7 @@ var drawHeat = function(heatData) {
             .attr('transform', 'translate(' + x + ',' + y +')');
 
         var rects = smallCells.selectAll('.color-cell')
-            .data(items, d => d);
+            .data(items);
 
         var rectsEnter = rects.enter()
             .append('rect')
@@ -1257,28 +1255,106 @@ var drawHeat = function(heatData) {
     heatData.forEach(d => cells.push(new HeatCell(d)));
     //console.log(cells);
     var heatInner = heatSVG.select('.heat-inner');
+    var temp = [];
+    var xScale = d3.scaleLinear()
+        .domain([1, 4])
+        .range([0, heatMapWidth]);
 
+    var yScale = d3.scaleLinear()
+        .domain([1, 2.5])
+        .range([0, heatMapHeight]);
+    heatData.forEach(d => {
+        //console.log(d);
+        var y = heatyScale(+d.month) + heatMapHeight / 2;
+        var x = heatxScale(+d.day) + heatMapWidth / 2;
+        var colorCellPositions = [];
+        for (var i = 1; i <= 4; i++) {
+            for (var j = 1; j <= 2; j++) {
+                colorCellPositions.push({
+                    'x': i,
+                    'y': j
+                });
+            }
+        }
+        var items = [];
+        for(var key in d) {
+            if (key == 'month' || key == 'day' || key == 'key') {
+                continue;
+            }
+            items.push({'color':key, 'value': d[key]})
+        }
+        for (var i = 0; i < items.length; i++) {
+            items[i].x= colorCellPositions[i].x;
+            items[i].y = colorCellPositions[i].y;
+        }
+        temp.push({
+            'x': x,
+            'y': y,
+            'month': +d.month,
+            'day': +d.day,
+            'items': items
+        })
+    });
+    
     heatInner.call(heatTip)
-
+    /*
     var bigCell = heatInner
         .selectAll('.big-cell')
-        .data(cells, d => d.getKey())
-    
+        //.data(cells, d => d.getKey)
+        .data(cells, d => d.colors.month + '-' + d.colors.day);
+        
     var bigCellEnter = bigCell.enter()
         .append('g')
         .attr('class', 'big-cell')
         .attr('x', d => d.colors.day)
         .attr('y', d => d.colors.month)
         .on('mouseover', heatTip.show)
-        .on('mouseout', heatTip.hide);
-    
-    bigCellEnter.merge(bigCell);
+        .on('mouseout', heatTip.hide)
 
-    bigCellEnter.each(function(cell) {
-            cell.update2(this, cell);
+
+    bigCellEnter.merge(bigCell).each(function(cell) {
+        cell.update2(this, cell);
     });
+    //bigCellEnter.merge(bigCell);
+    bigCell.exit().remove();
+    */
+   //console.log(heatData);
+   //console.log(temp);
+   var bigCell = heatInner
+        .selectAll('.big-cell')
+        .data(temp, d => d.x + '-' + d.y);
 
     bigCell.exit().remove();
+    
+    const bigCellEnter = bigCell.enter()
+        .append('g')
+        .attr('class', 'big-cell')
+        .attr('transform', d => 'translate(' + d.x + ',' + d.y + ')')
+        .on('mouseover', heatTip.show)
+        .on('mouseout', heatTip.hide)
+    
+    bigCell = bigCellEnter.merge(bigCell);
+
+    const smallCell = bigCell.selectAll('.small-cell')
+        .data(d => d.items)
+
+    smallCell.exit().remove();
+    
+    smallCell.enter()
+        .append('rect')
+        .attr('class', 'small-cell')
+        .attr('x', d => xScale(d.x))
+        .attr('y', d => yScale(d.y))
+        .attr('value', d => d.value)
+        .attr('width', cellWidth)
+        .attr('height', cellHeight)
+        .merge(smallCell)
+        .style('fill', d => colorMapping[d.color])
+        .style('fill-opacity', d =>  1 * opacityScale(d.value))
+        .style('stroke', d => d.color == 'black' ? 'white' : '') 
+        .style('stroke-opacity', d => d.color == 'black' ? opacityScale(d.value) : '');
+
+    
 }
 
 var processSankeyData = function(data) {
@@ -1767,8 +1843,8 @@ function brushmove() {
     var py2 = Math.round(heatyScale.invert(e[1][1]))
     inner.selectAll('.big-cell')
         .classed('hidden', d => {
-            var y = d.colors.month;
-            var x = d.colors.day;
+            var y = d.month;
+            var x = d.day;
             return x < px1 || x > px2 || y < py1 || y > py2 - 0.5;
         })
     mapInner.selectAll('.event-point')
