@@ -1232,7 +1232,7 @@ var drawHeat = function(heatData) {
             .attr('transform', 'translate(' + x + ',' + y +')');
 
         var rects = smallCells.selectAll('.color-cell')
-            .data(items, d => getKeyFun(d));
+            .data(items, d => d);
 
         var rectsEnter = rects.enter()
             .append('rect')
@@ -1653,7 +1653,6 @@ var updateHeatAndMap = function(start, end) {
         && colorFilter(d) 
         && stateFilter(d) 
         && brushFilter(d));
-    drawHeat(processHeatData(heatAndMapUpdated));
     opacityUpdated = events.filter(d => 
         yearFilter(d, start, end) 
         && colorFilter(d) 
@@ -1665,7 +1664,7 @@ var updateHeatAndMap = function(start, end) {
     getStateColorCount();
     updateState();
     drawMap(heatAndMapUpdated);
-    console.log('update heat map and map!')
+    //console.log('update heat map and map!')
     //brush.move(d3.select(brushcell), null);
     //var e = heatSVG.select('.heat-inner').select('.brush').select('.selection')
     //console.log(d3.brushSelection(brush));
