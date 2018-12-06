@@ -9,4 +9,4 @@
 > call python -m SimpleHTTPServer 8080 (for Python 2) or python -m http.server 8080 (for Python 3).
 4. open your broswer enter "localhost:8080" to visit the project
 
-![alt text](https://github.com/Yuzhuoran/Alien-Viz/design.png)
+![alt text](https://github.com/Yuzhuoran/Alien-Viz/blob/master/design.png)
