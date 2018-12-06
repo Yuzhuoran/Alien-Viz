@@ -53,7 +53,7 @@ var sanekyInnerHeight = sankeySVGHeigth - sankeypadding.t - sankeypadding.b;
 var durationInnerWidth = sankeySVGWidth - durationBarpadding.l - durationBarpadding.r;
 var durationInnerHeight = sankeySVGHeigth - durationBarpadding.t - durationBarpadding.b;
 
-var heatpadding = {t: 180, l: 151, r: 151, b: 251};
+var heatpadding = {t: 180, l: 151, r: 151, b: 151};
 var heatFilterpadding = {t: 120, l: 151, r: 151, b:650}
 var heatFilterInnerHeight = heatSVGHeight - heatFilterpadding.t - heatFilterpadding.b;
 var heatFilterInnerWidth = heatSVGWidth - heatFilterpadding.l - heatFilterpadding.r;
