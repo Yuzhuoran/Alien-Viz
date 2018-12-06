@@ -338,6 +338,12 @@ var selectedColorGroup = {
     'showAll': true
 }
 var validate = function(data) {
+    /*
+    var projection = d3.geoAlbersUsa();
+    if (projection([d.lng, d.lat]) == null) {
+        return false;
+    }
+    */
     if (data.country != 'us') {
         return false;
     }
@@ -752,13 +758,19 @@ var initMap = function(states) {
         .attr('text-anchor', 'middle')
         .text('Click a dot to see details. Click a state to filter, and scroll up to see the change.') 
 }
+var projectionFilter = function(d) {
+    var projection = d3.geoAlbersUsa();
+    return projection([d.lng, d.lat]) != null;
+}
 var drawMap = function(points) {
     var projection = d3.geoAlbersUsa();
     points = points.filter(d => projection([d.lng, d.lat]) != null)
     var mapInner = mapSVG.select('.map-inner')
 
     var mapPoint = mapInner.selectAll('.event-point')
-    .data(points, d => d.lat + '-' + d.lng)
+    .data(points, d => d)
+
+    mapPoint.exit().remove();
 
     mapPoint.enter()
         .append('circle')
@@ -802,7 +814,7 @@ var drawMap = function(points) {
             }
         })
 
-    mapPoint.exit().remove();
+    
 
 
     function getComments(comments) {
@@ -1354,7 +1366,6 @@ var drawHeat = function(heatData) {
         .style('stroke', d => d.color == 'black' ? 'white' : '') 
         .style('stroke-opacity', d => d.color == 'black' ? opacityScale(d.value) : '');
 
-    
 }
 
 var processSankeyData = function(data) {
@@ -1723,16 +1734,19 @@ var stackYearFilter = function(start, end) {
     drawStack(processStackData(stackUpdated));
 }
 
+
 var updateHeatAndMap = function(start, end) {
     heatAndMapUpdated = events.filter(d => 
         yearFilter(d, start, end) 
         && colorFilter(d) 
         && stateFilter(d) 
-        && brushFilter(d));
+        && brushFilter(d)
+        && projectionFilter(d));
     opacityUpdated = events.filter(d => 
         yearFilter(d, start, end) 
         && colorFilter(d) 
-        && stateFilter(d));
+        && stateFilter(d)
+        && projectionFilter(d));
     
     updateOpacityScale();
     drawHeat(processHeatData(heatAndMapUpdated));
@@ -1775,6 +1789,7 @@ function dragended(d) {
 }
 
 var updateSankey = function(start, end) {
+    
     sankeyUpdated = events.filter(d => (yearFilter(d, start, end) && stateFilter(d) && brushFilter(d)));
     drawSankey(processSankeyData(sankeyUpdated));
     updateSankeyColor();
@@ -1881,8 +1896,10 @@ function brushend() {
         'py2': py2,
     }
     brushRect.showAll = false;
+    /*
     console.log(brushRect.data)
     console.log(brushRect.showAll)
+    */
     getStateColorCount();
     updateState();
     updateSankey(+d3.select('#handlel').attr('value'), +d3.select('#handler').attr('value'));
